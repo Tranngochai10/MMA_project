@@ -86,18 +86,7 @@ Tiền tố route: `/api/auth`
   "message": "Đăng ký tài khoản thành công",
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "token_type": "Bearer",
-    "expires_in": "7d",
-    "user": {
-      "_id": "6ae1ea3a108d04ab44710862",
-      "full_name": "Nguyen Van A",
-      "email": "user.alex@example.com",
-      "phone": "0912345678",
-      "role": "USER",
-      "avatar_url": "https://images.unsplash.com/...",
-      "status": "active",
-      "created_at": "2026-10-28T12:00:00.000Z"
-    }
+    "expires_in": "7d"
   }
 }
 ```
@@ -130,17 +119,7 @@ Tiền tố route: `/api/auth`
   "message": "Đăng nhập thành công",
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "token_type": "Bearer",
-    "expires_in": "7d",
-    "user": {
-      "_id": "6ae1ea3a108d04ab44710862",
-      "full_name": "Nguyen Van A",
-      "email": "user.alex@example.com",
-      "phone": "0912345678",
-      "role": "USER",
-      "avatar_url": "https://images.unsplash.com/...",
-      "status": "active"
-    }
+    "expires_in": "7d"
   }
 }
 ```

@@ -17,9 +17,7 @@ function buildAuthResponse(user) {
 
   return {
     token: token,
-    token_type: 'Bearer',
-    expires_in: process.env.JWT_EXPIRES_IN || '7d',
-    user: sanitizeUser(user)
+    expires_in: process.env.JWT_EXPIRES_IN || '7d'
   };
 }
 
