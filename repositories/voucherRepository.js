@@ -153,11 +153,70 @@ async function create(data, session = null) {
   return voucher.save({ session });
 }
 
+async function findManagerVouchers(filter = {}, pagination = {}) {
+  const { page = 1, limit = 20 } = pagination;
+  const skip = (page - 1) * limit;
+
+  const query = {};
+  if (filter.brandId) {
+    query.brandId = new mongoose.Types.ObjectId(filter.brandId);
+  }
+  if (filter.status && filter.status !== 'ALL') {
+    query.status = filter.status.toUpperCase();
+  }
+  if (filter.search && filter.search.trim()) {
+    query.title = { $regex: filter.search.trim(), $options: 'i' };
+  }
+
+  const [vouchers, total] = await Promise.all([
+    Voucher.find(query)
+      .populate('brandId', 'name code logo_url rating')
+      .populate('categoryId', 'name slug icon')
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit),
+    Voucher.countDocuments(query)
+  ]);
+
+  return { vouchers, total, page: Number(page), limit: Number(limit) };
+}
+
+async function updateById(id, updateData) {
+  return Voucher.findByIdAndUpdate(id, updateData, { returnDocument: 'after' })
+    .populate('brandId', 'name code logo_url cover_image_url rating')
+    .populate('categoryId', 'name slug icon');
+}
+
+async function updateStatus(id, status) {
+  return Voucher.findByIdAndUpdate(
+    id,
+    { status: status.toUpperCase() },
+    { returnDocument: 'after' }
+  )
+    .populate('brandId', 'name code logo_url cover_image_url rating')
+    .populate('categoryId', 'name slug icon');
+}
+
+async function countVouchers(filter = {}) {
+  const query = {};
+  if (filter.brandId) {
+    query.brandId = new mongoose.Types.ObjectId(filter.brandId);
+  }
+  if (filter.status) {
+    query.status = filter.status.toUpperCase();
+  }
+  return Voucher.countDocuments(query);
+}
+
 module.exports = {
   findWithFilters,
   findById,
   findRecommended,
   findByIds,
   decrementAvailableQuantity,
-  create
+  create,
+  findManagerVouchers,
+  updateById,
+  updateStatus,
+  countVouchers
 };

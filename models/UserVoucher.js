@@ -14,6 +14,12 @@ const userVoucherSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Order',
+      default: null,
+      index: true
+    },
     // Mã voucher duy nhất: 2 chữ cái thương hiệu + 6 ký tự số (VD: SB184920)
     voucherCode: {
       type: String,
@@ -28,14 +34,6 @@ const userVoucherSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: ''
-    },
-    totalAmount: {
-      type: Number,
-      default: 0
-    },
-    paymentMethod: {
-      type: String,
-      default: 'Credit Card'
     },
     is_used: {
       type: Boolean,

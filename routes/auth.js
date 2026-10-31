@@ -17,6 +17,8 @@ router.post('/login', validateLogin, asyncHandler(authController.login));
 
 // Protected routes (Requires Bearer Token)
 router.get('/me', authenticate, asyncHandler(authController.getMe));
+router.put('/me', authenticate, asyncHandler(authController.updateMe));
+router.patch('/me', authenticate, asyncHandler(authController.updateMe));
 router.post(
   '/change-password',
   authenticate,

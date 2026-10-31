@@ -16,6 +16,11 @@ async function getMe(req, res) {
   return sendSuccess(res, 200, 'Lấy thông tin người dùng thành công', data);
 }
 
+async function updateMe(req, res) {
+  const data = await authService.updateMe(req.user._id, req.body);
+  return sendSuccess(res, 200, 'Cập nhật thông tin cá nhân thành công', data);
+}
+
 async function changePassword(req, res) {
   const data = await authService.changePassword(req.user._id, req.validatedBody);
   return sendSuccess(res, 200, 'Đổi mật khẩu thành công', data);
@@ -30,6 +35,7 @@ module.exports = {
   register,
   login,
   getMe,
+  updateMe,
   changePassword,
   logout
 };

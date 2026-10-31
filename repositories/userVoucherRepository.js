@@ -125,11 +125,145 @@ async function getTopCategoryIdsByUserId(userId, limit = 3) {
   return result.map((item) => item._id);
 }
 
+async function findManagerRedemptions(filter = {}, pagination = {}) {
+  const { page = 1, limit = 20 } = pagination;
+  const skip = (page - 1) * limit;
+
+  const matchStage = { is_used: true };
+
+  const pipeline = [
+    { $match: matchStage },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'userId',
+        foreignField: '_id',
+        as: 'user'
+      }
+    },
+    { $unwind: '$user' },
+    {
+      $lookup: {
+        from: 'vouchers',
+        localField: 'voucherId',
+        foreignField: '_id',
+        as: 'voucher'
+      }
+    },
+    { $unwind: '$voucher' },
+    {
+      $lookup: {
+        from: 'brands',
+        localField: 'voucher.brandId',
+        foreignField: '_id',
+        as: 'brand'
+      }
+    },
+    { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } }
+  ];
+
+  if (filter.brandId) {
+    pipeline.push({
+      $match: {
+        'voucher.brandId': new mongoose.Types.ObjectId(filter.brandId)
+      }
+    });
+  }
+
+  if (filter.search && filter.search.trim()) {
+    const s = filter.search.trim();
+    pipeline.push({
+      $match: {
+        $or: [
+          { voucherCode: { $regex: s, $options: 'i' } },
+          { 'user.full_name': { $regex: s, $options: 'i' } },
+          { 'voucher.title': { $regex: s, $options: 'i' } }
+        ]
+      }
+    });
+  }
+
+  const countPipeline = [...pipeline, { $count: 'total' }];
+
+  pipeline.push({ $sort: { used_at: -1 } });
+  pipeline.push({ $skip: skip });
+  pipeline.push({ $limit: Number(limit) });
+
+  const [redemptions, countResult] = await Promise.all([
+    UserVoucher.aggregate(pipeline),
+    UserVoucher.aggregate(countPipeline)
+  ]);
+
+  const total = countResult.length > 0 ? countResult[0].total : 0;
+  return {
+    redemptions,
+    total,
+    page: Number(page),
+    limit: Number(limit)
+  };
+}
+
+async function countRedemptions(filter = {}) {
+  if (!filter.brandId) {
+    return UserVoucher.countDocuments({ is_used: true });
+  }
+
+  const result = await UserVoucher.aggregate([
+    { $match: { is_used: true } },
+    {
+      $lookup: {
+        from: 'vouchers',
+        localField: 'voucherId',
+        foreignField: '_id',
+        as: 'voucher'
+      }
+    },
+    { $unwind: '$voucher' },
+    {
+      $match: {
+        'voucher.brandId': new mongoose.Types.ObjectId(filter.brandId)
+      }
+    },
+    { $count: 'total' }
+  ]);
+
+  return result.length > 0 ? result[0].total : 0;
+}
+
+async function countIssued(filter = {}) {
+  if (!filter.brandId) {
+    return UserVoucher.countDocuments();
+  }
+
+  const result = await UserVoucher.aggregate([
+    {
+      $lookup: {
+        from: 'vouchers',
+        localField: 'voucherId',
+        foreignField: '_id',
+        as: 'voucher'
+      }
+    },
+    { $unwind: '$voucher' },
+    {
+      $match: {
+        'voucher.brandId': new mongoose.Types.ObjectId(filter.brandId)
+      }
+    },
+    { $count: 'total' }
+  ]);
+
+  return result.length > 0 ? result[0].total : 0;
+}
+
 module.exports = {
   create,
   findByUserId,
   findByCode,
   findByIdOrCode,
   markAsUsed,
-  getTopCategoryIdsByUserId
+  getTopCategoryIdsByUserId,
+  findManagerRedemptions,
+  countRedemptions,
+  countIssued
 };

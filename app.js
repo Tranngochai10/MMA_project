@@ -17,6 +17,9 @@ const brandsRouter = require('./routes/brands');
 const vouchersRouter = require('./routes/vouchers');
 const favoritesRouter = require('./routes/favorites');
 const userVouchersRouter = require('./routes/userVouchers');
+const ordersRouter = require('./routes/orders');
+const notificationsRouter = require('./routes/notifications');
+const managerRouter = require('./routes/manager');
 
 const app = express();
 
@@ -53,6 +56,9 @@ app.use('/api/brands', brandsRouter);
 app.use('/api/vouchers', vouchersRouter);
 app.use('/api/favorites', favoritesRouter);
 app.use('/api/user-vouchers', userVouchersRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/manager', managerRouter);
 
 // Centralized API Error Handler
 app.use(errorHandler);

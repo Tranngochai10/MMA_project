@@ -1,6 +1,6 @@
 # 📖 TÀI LIỆU HƯỚNG DẪN TÍCH HỢP HỆ THỐNG RESTful API
 > **Dự án**: Sàn Giao Dịch & Săn Voucher Ưu Đãi Thương Hiệu (`Voucher Platform`)  
-> **Backend Base URL**: `http://localhost:5000` (hoặc IP mạng nội bộ của máy chủ backend khi test qua Expo mobile: `http://<IP_MAY_TINH>:5000`)  
+> **Backend Base URL**: `http://localhost:5000` (hoặc IP máy tính phát wifi khi test qua Expo mobile: `http://<IP_MAY_TINH>:5000`)  
 > **Định dạng dữ liệu**: `JSON` (`Content-Type: application/json`)  
 > **Cơ chế xác thực**: `JWT Bearer Token` (`Authorization: Bearer <token>`)
 
@@ -14,7 +14,11 @@
 5. [Module 4: Khám Phá & Săn Voucher (Vouchers)](#5-module-4-khám-phá--săn-voucher-vouchers)
 6. [Module 5: Mục Yêu Thích (Favorites)](#6-module-5-mục-yêu-thích-favorites)
 7. [Module 6: Kho Ví Voucher Của Người Dùng (User Vouchers)](#7-module-6-kho-ví-voucher-của-người-dùng-user-vouchers)
-8. [Kiểm Tra Trạng Thái Server (Health Check)](#8-kiểm-tra-trạng-thái-server-health-check)
+8. [Module 7: Lịch Sử Đơn Hàng (Orders)](#8-module-7-lịch-sử-đơn-hàng-orders)
+9. [Module 8: Hệ Thống Thông Báo (Notifications)](#9-module-8-hệ-thống-thông-báo-notifications)
+10. [Module 9: Cổng Quản Lý Đối Tác & Toàn Sàn (Manager Portal)](#10-module-9-cổng-quản-lý-đối-tác--toàn-sàn-manager-portal)
+11. [Kiểm Tra Trạng Thái Server (Health Check)](#11-kiểm-tra-trạng-thái-server-health-check)
+12. [Bộ Lệnh cURL Kiểm Thử Mẫu (Quick cURL Cheat Sheet)](#12-bộ-lệnh-curl-kiểm-thử-mẫu-quick-curl-cheat-sheet)
 
 ---
 
@@ -34,51 +38,37 @@
 {
   "success": false,
   "message": "Thông báo lỗi chi tiết cho client",
-  "details": [ ... ] // (Tùy chọn) danh sách chi tiết các trường bị lỗi validate
+  "details": [ ... ]
 }
 ```
 
 ### 1.3. Bảng mã HTTP Status Code thông dụng
 * `200 OK`: Truy vấn, cập nhật hoặc thao tác thành công.
-* `201 Created`: Tạo tài nguyên mới thành công (Đăng ký, Mua voucher).
-* `400 Bad Request`: Thiếu dữ liệu, dữ liệu gửi lên sai định dạng, voucher hết lượt, voucher hết hạn.
-* `401 Unauthorized`: Chưa đăng nhập hoặc token JWT bị thiếu / sai / hết hạn.
-* `403 Forbidden`: Tài khoản không có quyền truy cập hoặc không phải chủ sở hữu voucher.
-* `404 Not Found`: Không tìm thấy ID tài nguyên được yêu cầu.
-* `409 Conflict`: Dữ liệu bị trùng lặp (Email đã đăng ký, Mã thương hiệu đã tồn tại).
-* `500 Internal Server Error`: Lỗi máy chủ xử lý.
+* `201 Created`: Tạo tài nguyên mới thành công.
+* `400 Bad Request`: Dữ liệu không hợp lệ, thiếu trường bắt buộc, voucher đã hết hạn hoặc đã sử dụng.
+* `401 Unauthorized`: Chưa đăng nhập hoặc token không hợp lệ / hết hạn.
+* `403 Forbidden`: Không có quyền truy cập (cần Role `MANAGER`) hoặc không sở hữu tài nguyên.
+* `404 Not Found`: Không tìm thấy tài nguyên yêu cầu.
+* `409 Conflict`: Dữ liệu bị trùng lặp (email đã đăng ký, mã code thương hiệu đã tồn tại).
+* `500 Internal Server Error`: Lỗi máy chủ.
 
 ---
 
 ## 2. MODULE 1: XÁC THỰC TÀI KHOẢN (AUTHENTICATION)
 Tiền tố route: `/api/auth`
 
----
-
 ### 2.1. Đăng ký tài khoản (Register)
-* **URL**: `/api/auth/register`
-* **Method**: `POST`
-* **Xác thực**: Không (Public)
-* **Mô tả**: Đăng ký tài khoản mới. Mặc định mọi tài khoản tạo qua API này đều có quyền `role: "USER"`.
+* **URL**: `/api/auth/register` | **Method**: `POST` | **Auth**: Không
+* **Mô tả**: Đăng ký tài khoản mới. Mặc định luôn có `role: "USER"`.
 * **Request Body**:
-
-| Trường | Kiểu dữ liệu | Bắt buộc | Ghi chú |
-| :--- | :--- | :---: | :--- |
-| `full_name` | `string` | **Có** | Họ và tên người dùng (VD: `"Nguyen Van A"`) |
-| `email` | `string` | **Có** | Định dạng email hợp lệ, duy nhất |
-| `password` | `string` | **Có** | Mật khẩu tối thiểu 6 ký tự |
-| `phone` | `string` | Không | Số điện thoại liên hệ (VD: `"0912345678"`) |
-
-* **Request Body Mẫu**:
 ```json
 {
-  "full_name": "Nguyen Van A",
+  "full_name": "Alex Rivera",
   "email": "user.alex@example.com",
   "password": "Voucher2026!",
-  "phone": "0912345678"
+  "phone": "0912 345 678"
 }
 ```
-
 * **Response Mẫu (201 Created)**:
 ```json
 {
@@ -91,27 +81,15 @@ Tiền tố route: `/api/auth`
 }
 ```
 
----
-
 ### 2.2. Đăng nhập (Login)
-* **URL**: `/api/auth/login`
-* **Method**: `POST`
-* **Xác thực**: Không (Public)
+* **URL**: `/api/auth/login` | **Method**: `POST` | **Auth**: Không
 * **Request Body**:
-
-| Trường | Kiểu dữ liệu | Bắt buộc | Ghi chú |
-| :--- | :--- | :---: | :--- |
-| `email` | `string` | **Có** | Email tài khoản |
-| `password` | `string` | **Có** | Mật khẩu tài khoản |
-
-* **Request Body Mẫu**:
 ```json
 {
   "email": "user.alex@example.com",
   "password": "Voucher2026!"
 }
 ```
-
 * **Response Mẫu (200 OK)**:
 ```json
 {
@@ -124,13 +102,8 @@ Tiền tố route: `/api/auth`
 }
 ```
 
----
-
-### 2.3. Lấy thông tin cá nhân hiện tại (Get Current User)
-* **URL**: `/api/auth/me`
-* **Method**: `GET`
-* **Headers**: `Authorization: Bearer <TOKEN>`
-* **Xác thực**: Bắt buộc (Token hợp lệ)
+### 2.3. Lấy thông tin cá nhân hiện tại (Get Profile)
+* **URL**: `/api/auth/me` | **Method**: `GET` | **Auth**: `Bearer Token`
 * **Response Mẫu (200 OK)**:
 ```json
 {
@@ -138,60 +111,61 @@ Tiền tố route: `/api/auth`
   "message": "Lấy thông tin người dùng thành công",
   "data": {
     "user": {
-      "_id": "6ae1ea3a108d04ab44710862",
-      "full_name": "Nguyen Van A",
+      "_id": "6ae621e8beaaf41707e02c35",
+      "full_name": "Alex Rivera",
       "email": "user.alex@example.com",
-      "phone": "0912345678",
+      "phone": "0912 345 678",
       "role": "USER",
-      "avatar_url": "https://images.unsplash.com/...",
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
       "status": "active"
     }
   }
 }
 ```
 
----
-
-### 2.4. Đổi mật khẩu (Change Password)
-* **URL**: `/api/auth/change-password`
-* **Method**: `POST`
-* **Headers**: `Authorization: Bearer <TOKEN>`
+### 2.4. Cập nhật hồ sơ cá nhân (Update Profile)
+* **URL**: `/api/auth/me` | **Method**: `PUT` (hoặc `PATCH`) | **Auth**: `Bearer Token`
+* **Màn hình Frontend**: `/(user)/edit-profile.tsx`
 * **Request Body**:
-
-| Trường | Kiểu dữ liệu | Bắt buộc | Ghi chú |
-| :--- | :--- | :---: | :--- |
-| `current_password` | `string` | **Có** | Mật khẩu đang sử dụng |
-| `new_password` | `string` | **Có** | Mật khẩu mới (tối thiểu 6 ký tự) |
-
----
-
-### 2.5. Đăng xuất (Logout)
-* **URL**: `/api/auth/logout`
-* **Method**: `POST`
-* **Headers**: `Authorization: Bearer <TOKEN>`
+```json
+{
+  "full_name": "Alex Rivera Updated",
+  "phone": "0988 888 999",
+  "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80"
+}
+```
 * **Response Mẫu (200 OK)**:
 ```json
 {
   "success": true,
-  "message": "Đăng xuất thành công",
+  "message": "Cập nhật thông tin cá nhân thành công",
   "data": {
-    "logged_out": true
+    "user": {
+      "_id": "6ae621e8beaaf41707e02c35",
+      "full_name": "Alex Rivera Updated",
+      "email": "user.alex@example.com",
+      "phone": "0988 888 999",
+      "role": "USER",
+      "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80"
+    }
   }
 }
 ```
+
+### 2.5. Đổi mật khẩu (Change Password)
+* **URL**: `/api/auth/change-password` | **Method**: `POST` | **Auth**: `Bearer Token`
+* **Request Body**: `{ "current_password": "...", "new_password": "..." }`
+
+### 2.6. Đăng xuất (Logout)
+* **URL**: `/api/auth/logout` | **Method**: `POST` | **Auth**: `Bearer Token`
 
 ---
 
 ## 3. MODULE 2: DANH MỤC NGÀNH HÀNG (CATEGORIES)
 Tiền tố route: `/api/categories`
 
----
-
-### 3.1. Lấy danh sách danh mục (Filter Chips)
-* **URL**: `/api/categories`
-* **Method**: `GET`
-* **Xác thực**: Không (Public)
-* **Mô tả**: Cung cấp danh mục cho dải thanh cuộn ngang Filter Chip trên màn hình Khám phá.
+### 3.1. Lấy danh sách danh mục
+* **URL**: `/api/categories` | **Method**: `GET` | **Auth**: Không
 * **Response Mẫu (200 OK)**:
 ```json
 {
@@ -199,18 +173,11 @@ Tiền tố route: `/api/categories`
   "message": "Lấy danh sách danh mục thành công",
   "data": [
     {
-      "_id": "6ae1e9e25a9238c9dd0699f6",
+      "_id": "6ae621e8beaaf41707e02c1f",
       "name": "Cà phê & Trà",
       "slug": "coffee-tea",
       "icon": "cafe-outline",
       "order": 1
-    },
-    {
-      "_id": "6ae1e9e25a9238c9dd0699f7",
-      "name": "Ẩm thực & Nhà hàng",
-      "slug": "food-dining",
-      "icon": "restaurant-outline",
-      "order": 2
     }
   ]
 }
@@ -221,14 +188,8 @@ Tiền tố route: `/api/categories`
 ## 4. MODULE 3: THƯƠNG HIỆU ĐỐI TÁC (BRANDS)
 Tiền tố route: `/api/brands`
 
----
-
-### 4.1. Danh sách thương hiệu nổi bật
-* **URL**: `/api/brands`
-* **Method**: `GET`
-* **Headers**: `Authorization: Bearer <TOKEN>` *(Tùy chọn: Gửi kèm token để biết user đã tim thương hiệu đó chưa)*
-* **Xác thực**: Không bắt buộc
-* **Mô tả**: Phục vụ mục "Thương hiệu nổi bật" trên Trang Chủ và màn hình Danh sách Thương hiệu. Đã tích hợp đếm sẵn số voucher khả dụng `activeVouchersCount`.
+### 4.1. Lấy danh sách thương hiệu nổi bật
+* **URL**: `/api/brands` | **Method**: `GET` | **Auth**: Không bắt buộc (Kèm token để nhận diện `isFavorite`)
 * **Response Mẫu (200 OK)**:
 ```json
 {
@@ -236,15 +197,13 @@ Tiền tố route: `/api/brands`
   "message": "Lấy danh sách thương hiệu nổi bật thành công",
   "data": [
     {
-      "_id": "6ae1e9e25a9238c9dd0699fe",
+      "_id": "6ae621e8beaaf41707e02c29",
       "name": "Starbucks Coffee",
       "code": "SB",
       "rating": 4.9,
       "logo_url": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=200&auto=format&fit=crop&q=80",
       "cover_image_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&auto=format&fit=crop&q=80",
-      "description": "Thương hiệu cà phê đặc sản hàng đầu thế giới, đồ uống pha chế thủ công.",
       "categoryName": "Cà phê & Trà",
-      "categoryId": "6ae1e9e25a9238c9dd0699f6",
       "activeVouchersCount": 2,
       "isFavorite": false
     }
@@ -252,174 +211,52 @@ Tiền tố route: `/api/brands`
 }
 ```
 
----
-
 ### 4.2. Chi tiết 1 thương hiệu
-* **URL**: `/api/brands/:id`
-* **Method**: `GET`
-* **Params**: `:id` - ObjectId của thương hiệu
-
----
-
-### 4.3. Tạo thương hiệu mới (Dành cho Quản lý)
-* **URL**: `/api/brands`
-* **Method**: `POST`
-* **Headers**: `Authorization: Bearer <MANAGER_TOKEN>`
-* **Quyền hạn**: `MANAGER`
-* **Request Body**:
-
-| Trường | Kiểu dữ liệu | Bắt buộc | Ghi chú |
-| :--- | :--- | :---: | :--- |
-| `name` | `string` | **Có** | Tên thương hiệu |
-| `code` | `string` | **Có** | Mã 2 chữ cái viết hoa duy nhất (VD: `"PL"`, `"HL"`) |
-| `categoryId` | `string` | Không | ObjectId của danh mục ngành hàng |
-| `rating` | `number` | Không | Đánh giá sao (1.0 - 5.0, mặc định: 4.8) |
-| `logo_url` | `string` | Không | URL ảnh logo tròn |
-| `cover_image_url` | `string` | Không | URL ảnh banner thương hiệu |
-| `description` | `string` | Không | Giới thiệu về thương hiệu |
+* **URL**: `/api/brands/:id` | **Method**: `GET` | **Auth**: Không bắt buộc
 
 ---
 
 ## 5. MODULE 4: KHÁM PHÁ & SĂN VOUCHER (VOUCHERS)
 Tiền tố route: `/api/vouchers`
 
----
-
 ### 5.1. Danh sách Voucher & Gợi ý Thông minh
-* **URL**: `/api/vouchers`
-* **Method**: `GET`
-* **Headers**: `Authorization: Bearer <TOKEN>` *(Khuyến khích gửi kèm để kích hoạt tính năng "Dành riêng cho bạn")*
-* **Xác thực**: Không bắt buộc
-* **Query Parameters**:
-
-| Param | Kiểu | Mặc định | Ý nghĩa & Giá trị |
-| :--- | :--- | :---: | :--- |
-| `categoryId` | `string` | - | Lọc theo ObjectId danh mục |
-| `brandId` | `string` | - | Lọc theo ObjectId thương hiệu |
-| `search` | `string` | - | Tìm kiếm từ khóa theo tiêu đề voucher |
-| `sort` | `string` | `discount_desc` | `newest`: Mới ra mắt<br/>`discount_desc`: Ưu đãi hot (Giảm giá cao nhất)<br/>`price_asc`: Giá thấp đến cao<br/>`price_desc`: Giá cao đến thấp |
-| `page` | `number` | `1` | Số trang |
-| `limit` | `number` | `20` | Số lượng voucher / trang |
-
-> **🌟 Logic Gợi ý "Dành Riêng Cho Bạn"**:  
-> Nếu client **gửi kèm Token người dùng** và **không truyền bộ lọc tìm kiếm**, hệ thống sẽ tự động quét ví voucher của user để nhận diện danh mục ưu thích nhất và ưu tiên đẩy các voucher tương tự lên đầu danh sách (kèm cờ `"isPersonalized": true`).
-
-* **Response Mẫu (200 OK)**:
-```json
-{
-  "success": true,
-  "message": "Lấy danh sách voucher thành công",
-  "data": {
-    "vouchers": [
-      {
-        "_id": "6ae1e9e25a9238c9dd069a04",
-        "title": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu",
-        "brand": {
-          "_id": "6ae1e9e25a9238c9dd0699fe",
-          "name": "Starbucks Coffee",
-          "code": "SB",
-          "logo_url": "https://images.unsplash.com/...",
-          "rating": 4.9
-        },
-        "category": "Cà phê & Trà",
-        "categoryId": "6ae1e9e25a9238c9dd0699f6",
-        "discountType": "PERCENTAGE",
-        "discountValue": 50,
-        "discountPercent": 50,
-        "discountDisplay": "50% OFF",
-        "sellingPrice": 45000,
-        "originalValue": 90000,
-        "expirationDate": "2027-06-30T23:59:59.000Z",
-        "availableQuantity": 94,
-        "thumbnail_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&auto=format&fit=crop&q=80",
-        "isFavorite": false
-      }
-    ],
-    "total": 7,
-    "page": 1,
-    "limit": 20,
-    "isPersonalized": true
-  }
-}
-```
-
----
+* **URL**: `/api/vouchers` | **Method**: `GET` | **Auth**: Không bắt buộc
+* **Query Params**: `categoryId`, `brandId`, `search`, `sort` (`newest`, `discount_desc`, `price_asc`, `price_desc`), `page`, `limit`.
 
 ### 5.2. Xem Chi tiết 1 Voucher
-* **URL**: `/api/vouchers/:id`
-* **Method**: `GET`
-* **Params**: `:id` - ObjectId của voucher
-* **Response Mẫu (200 OK)**:
-```json
-{
-  "success": true,
-  "message": "Lấy chi tiết voucher thành công",
-  "data": {
-    "_id": "6ae1e9e25a9238c9dd069a04",
-    "title": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu",
-    "description": "Áp dụng cho mọi cỡ ly Frappuccino, Cà phê pha máy và Trà Teavana đặc biệt.",
-    "brand": {
-      "_id": "6ae1e9e25a9238c9dd0699fe",
-      "name": "Starbucks Coffee",
-      "code": "SB",
-      "logo_url": "https://images.unsplash.com/...",
-      "cover_image_url": "https://images.unsplash.com/...",
-      "rating": 4.9
-    },
-    "category": "Cà phê & Trà",
-    "discountType": "PERCENTAGE",
-    "discountValue": 50,
-    "discountDisplay": "50% OFF",
-    "sellingPrice": 45000,
-    "originalValue": 90000,
-    "totalQuantity": 100,
-    "availableQuantity": 94,
-    "startDate": "2026-10-28T12:00:00.000Z",
-    "expirationDate": "2027-06-30T23:59:59.000Z",
-    "termsAndConditions": [
-      "Áp dụng tại tất cả các cửa hàng Starbucks Việt Nam.",
-      "Mỗi voucher có giá trị sử dụng 01 lần duy nhất.",
-      "Không quy đổi thành tiền mặt hoặc hoàn lại tiền thừa."
-    ],
-    "coverImage": "https://images.unsplash.com/...",
-    "thumbnail_url": "https://images.unsplash.com/...",
-    "isFavorite": false
-  }
-}
-```
+* **URL**: `/api/vouchers/:id` | **Method**: `GET` | **Auth**: Không bắt buộc
 
----
-
-### 5.3. Mua Voucher (Giao dịch Mua & Nhận mã)
-* **URL**: `/api/vouchers/:id/buy`
-* **Method**: `POST`
-* **Headers**: `Authorization: Bearer <TOKEN>`
-* **Xác thực**: Bắt buộc (User đang đăng nhập)
+### 5.3. Mua Voucher (Giao dịch Mua & Nhận mã Atomic)
+* **URL**: `/api/vouchers/:id/buy` | **Method**: `POST` | **Auth**: `Bearer Token`
 * **Mô tả nghiệp vụ**:
-  * Trừ số lượng khả dụng `availableQuantity` theo cơ chế Atomic an toàn.
-  * Tự động sinh mã voucher độc nhất: **2 chữ cái Brand + 6 số ngẫu nhiên** (VD: `SB764270`).
-  * Sinh mã đơn hàng `orderCode` (VD: `ORD-71500`).
-  * Tự động nạp vào kho ví người dùng `UserVoucher` với trạng thái `is_used = false`.
-* **Request Body** *(Tùy chọn)*:
+  * Trừ số lượng tồn kho `availableQuantity` theo cơ chế Atomic an toàn.
+  * Tự động sinh `Order` mới (mã `ORD-xxxxx`).
+  * Sinh mã voucher duy nhất chuẩn **2 chữ cái Brand + 6 số** (VD: `SB184920`).
+  * Tự động lưu vào kho ví `UserVoucher` (liên kết với `orderId`).
+  * Tự động phát thông báo `PURCHASE_SUCCESS` cho User.
+  * Bọc toàn bộ trong MongoDB Session Transaction rollback an toàn nếu phát sinh sự cố.
+* **Request Body**:
 ```json
 {
-  "paymentMethod": "Credit Card" // hoặc "MoMo", "ZaloPay", "E-Wallet"
+  "paymentMethod": "MoMo E-Wallet"
 }
 ```
-* **Response Mẫu (Khớp màn hình Thanh toán thành công)**:
+* **Response Mẫu (200 OK)**:
 ```json
 {
   "success": true,
   "message": "Thanh toán và nhận voucher thành công",
   "data": {
-    "orderCode": "ORD-71500",
-    "voucherCode": "SB764270",
+    "orderId": "6ae6223daec3d3da1375b12c",
+    "orderCode": "ORD-78107",
+    "walletVoucherId": "6ae6223daec3d3da1375b12d",
+    "voucherCode": "SB184920",
     "voucherTitle": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu",
     "brandName": "Starbucks Coffee",
     "brandLogo": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=200&auto=format&fit=crop&q=80",
     "totalAmount": 45000,
-    "paymentMethod": "Credit Card",
-    "purchasedDate": "2026-10-28T12:30:08.350Z",
+    "paymentMethod": "MoMo E-Wallet",
+    "purchasedDate": "2026-11-01T00:15:00.000Z",
     "expirationDate": "2027-06-30T23:59:59.000Z"
   }
 }
@@ -428,172 +265,518 @@ Tiền tố route: `/api/vouchers`
 ---
 
 ## 6. MODULE 5: MỤC YÊU THÍCH (FAVORITES)
-Tiền tố route: `/api/favorites`  
-*(Tất cả API trong module này đều bắt buộc kèm `Authorization: Bearer <TOKEN>`)*
+Tiền tố route: `/api/favorites` | **Auth**: `Bearer Token`
 
----
-
-### 6.1. Bấm tim / Bỏ tim Thương hiệu (Toggle Brand Favorite)
-* **URL**: `/api/favorites/brands/:id/toggle`
-* **Method**: `POST`
-* **Params**: `:id` - ObjectId của Brand
-* **Response Mẫu**:
-```json
-{
-  "success": true,
-  "message": "Đã thêm thương hiệu vào mục yêu thích",
-  "data": {
-    "brandId": "6ae1e9e25a9238c9dd0699fe",
-    "isFavorite": true,
-    "message": "Đã thêm thương hiệu vào mục yêu thích"
-  }
-}
-```
-
----
-
-### 6.2. Lấy danh sách Thương hiệu đã yêu thích
-* **URL**: `/api/favorites/brands`
-* **Method**: `GET`
-* **Mô tả**: Trả về các thương hiệu user đã tim, kèm trường `activeVouchersCount` và `isFavorite: true`.
-
----
-
-### 6.3. Bấm tim / Bỏ tim Voucher (Toggle Voucher Favorite)
-* **URL**: `/api/favorites/vouchers/:id/toggle`
-* **Method**: `POST`
-* **Params**: `:id` - ObjectId của Voucher
-* **Response Mẫu**:
-```json
-{
-  "success": true,
-  "message": "Đã thêm voucher vào mục yêu thích",
-  "data": {
-    "voucherId": "6ae1e9e25a9238c9dd069a04",
-    "isFavorite": true,
-    "message": "Đã thêm voucher vào mục yêu thích"
-  }
-}
-```
-
----
-
-### 6.4. Lấy danh sách Voucher đã yêu thích
-* **URL**: `/api/favorites/vouchers`
-* **Method**: `GET`
-* **Mô tả**: Trả về danh sách voucher user đã tim.
+* `GET /api/favorites/brands`: Danh sách thương hiệu đã tim.
+* `POST /api/favorites/brands/:id/toggle`: Tim / Bỏ tim thương hiệu.
+* `GET /api/favorites/vouchers`: Danh sách voucher đã tim.
+* `POST /api/favorites/vouchers/:id/toggle`: Tim / Bỏ tim voucher.
 
 ---
 
 ## 7. MODULE 6: KHO VÍ VOUCHER CỦA NGƯỜI DÙNG (USER VOUCHERS)
-Tiền tố route: `/api/user-vouchers`  
-*(Tất cả API trong module này đều bắt buộc kèm `Authorization: Bearer <TOKEN>`)*
+Tiền tố route: `/api/user-vouchers` | **Auth**: `Bearer Token`
 
----
-
-### 7.1. Lấy danh sách voucher trong ví (User Wallet)
-* **URL**: `/api/user-vouchers`
-* **Method**: `GET`
-* **Query Parameters**:
-
-| Param | Kiểu | Mặc định | Giá trị chấp nhận |
-| :--- | :--- | :---: | :--- |
-| `status` | `string` | `available` | `available`: Khả dụng (chưa dùng & còn hạn)<br/>`used`: Đã sử dụng (`is_used = true`)<br/>`expired`: Hết hạn (`is_used = false` & quá hạn)<br/>`all`: Toàn bộ lịch sử |
-
-* **Response Mẫu (Khớp định dạng thẻ WalletVoucherCard)**:
+### 7.1. Lấy danh sách ví voucher (Wallet)
+* **URL**: `/api/user-vouchers?status=available`
+* **Query Params**: `status` (`available`, `used`, `expired`, `all`)
+* **Response Mẫu (200 OK)**:
 ```json
 {
   "success": true,
   "message": "Lấy danh sách ví voucher thành công",
   "data": [
     {
-      "_id": "6ae1ead0fa54ca8d46ed18a4",
-      "voucherId": "6ae1e9e25a9238c9dd069a04",
-      "voucherCode": "SB764270",
+      "_id": "6ae621e8beaaf41707e02c42",
+      "voucherId": "6ae621e8beaaf41707e02c38",
+      "voucherCode": "SS829104",
       "orderCode": "ORD-71500",
-      "title": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu",
-      "brandName": "Starbucks Coffee",
-      "brandLogo": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=200&auto=format&fit=crop&q=80",
-      "discountDisplay": "50% OFF",
-      "sellingPrice": 45000,
-      "originalValue": 90000,
-      "coverImage": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&auto=format&fit=crop&q=80",
+      "title": "Giảm 40% ShackBurger Kèm Khoai Tây Chiên Lượn Sóng",
+      "brandName": "Shake Shack",
+      "brandLogo": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&auto=format&fit=crop&q=80",
+      "discountDisplay": "40% OFF",
+      "sellingPrice": 75000,
+      "originalValue": 125000,
       "status": "AVAILABLE",
       "statusText": "Khả dụng",
       "isUsed": false,
       "usedAt": null,
       "expirationDate": "2027-06-30T23:59:59.000Z",
-      "purchasedDate": "2026-10-28T12:30:08.350Z"
+      "purchasedDate": "2026-11-01T00:00:00.000Z"
     }
   ]
 }
 ```
 
+### 7.2. Sử dụng Voucher (Use Voucher)
+* **URL**: `/api/user-vouchers/:id/use` *(Hỗ trợ `PATCH` và `POST`)*
+* **Params**: `:id` - Truyền `_id` hoặc mã `voucherCode` (VD: `SS829104`).
+* **Nghiệp vụ**: Cập nhật `is_used = true`, ghi nhận `used_at = now`, và tự động phát thông báo `REDEMPTION_CONFIRMED`.
+
 ---
 
-### 7.2. Sử dụng Voucher (Use Voucher)
-* **URL**: `/api/user-vouchers/:id/use` *(Hỗ trợ cả method `PATCH` và `POST`)*
-* **Method**: `PATCH` hoặc `POST`
-* **Params**: `:id` - Có thể truyền **`_id` của UserVoucher** hoặc **Mã voucher `voucherCode`** (VD: `SB764270`)
-* **Mô tả nghiệp vụ**:
-  * Kiểm tra đúng User sở hữu voucher (nếu không phải $\rightarrow$ `403 Forbidden`).
-  * Kiểm tra nếu đã dùng trước đó $\rightarrow$ `400 Bad Request: "Voucher này đã được sử dụng trước đó"`.
-  * Kiểm tra nếu đã quá hạn $\rightarrow$ `400 Bad Request: "Voucher đã hết hạn sử dụng"`.
-  * Đổi cờ `is_used = true` và ghi nhận thời gian `used_at = new Date()`.
+## 8. MODULE 7: LỊCH SỬ ĐƠN HÀNG (ORDERS)
+Tiền tố route: `/api/orders` | **Auth**: `Bearer Token`
+* **Màn hình Frontend**: `/(user)/orders.tsx` và `/(user)/orders/[id].tsx`
+
+### 8.1. Lấy danh sách lịch sử đơn hàng
+* **URL**: `/api/orders`
+* **Method**: `GET`
+* **Query Params**:
+  * `status`: `ALL`, `PAID`, `PENDING`, `FAILED`, `CANCELLED` (Mặc định: `ALL`).
+  * `search`: Tìm kiếm theo mã đơn hàng `ORD-xxxxx`.
 * **Response Mẫu (200 OK)**:
 ```json
 {
   "success": true,
-  "message": "Sử dụng voucher thành công",
+  "message": "Lấy lịch sử đơn hàng thành công",
+  "data": [
+    {
+      "_id": "6ae621e8beaaf41707e02c41",
+      "id": "ORD-71500",
+      "orderCode": "ORD-71500",
+      "voucherId": "6ae621e8beaaf41707e02c38",
+      "voucherTitle": "Giảm 40% ShackBurger Kèm Khoai Tây Chiên Lượn Sóng",
+      "brandName": "Shake Shack",
+      "brandLogo": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&auto=format&fit=crop&q=80",
+      "amount": 75000,
+      "paymentMethod": "MoMo E-Wallet",
+      "status": "PAID",
+      "createdAt": "2026-11-01T00:00:00.000Z",
+      "walletVoucherId": "6ae621e8beaaf41707e02c42",
+      "voucherCode": "SS829104",
+      "isUsed": false
+    }
+  ]
+}
+```
+
+### 8.2. Chi tiết 1 đơn hàng
+* **URL**: `/api/orders/:id`
+* **Method**: `GET`
+* **Params**: `:id` - ObjectId của đơn hàng hoặc mã đơn hàng `ORD-xxxxx`.
+* **Response Mẫu (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Lấy chi tiết đơn hàng thành công",
   "data": {
-    "_id": "6ae1ead0fa54ca8d46ed18a4",
-    "voucherId": "6ae1e9e25a9238c9dd069a04",
-    "voucherCode": "SB764270",
+    "_id": "6ae621e8beaaf41707e02c41",
+    "id": "ORD-71500",
     "orderCode": "ORD-71500",
-    "title": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu",
-    "brandName": "Starbucks Coffee",
-    "brandLogo": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=200&auto=format&fit=crop&q=80",
-    "discountDisplay": "50% OFF",
-    "status": "USED",
-    "statusText": "Đã dùng",
-    "isUsed": true,
-    "usedAt": "2026-10-28T12:38:26.387Z",
-    "expirationDate": "2027-06-30T23:59:59.000Z",
-    "purchasedDate": "2026-10-28T12:30:08.350Z"
+    "voucherId": "6ae621e8beaaf41707e02c38",
+    "voucherTitle": "Giảm 40% ShackBurger Kèm Khoai Tây Chiên Lượn Sóng",
+    "brandName": "Shake Shack",
+    "brandLogo": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&auto=format&fit=crop&q=80",
+    "amount": 75000,
+    "paymentMethod": "MoMo E-Wallet",
+    "status": "PAID",
+    "createdAt": "2026-11-01T00:00:00.000Z",
+    "walletVoucherId": "6ae621e8beaaf41707e02c42",
+    "voucherCode": "SS829104",
+    "isUsed": false,
+    "usedAt": null,
+    "expiresAt": "2027-06-30T23:59:59.000Z"
   }
 }
 ```
 
 ---
 
-## 8. KIỂM TRA TRẠNG THÁI SERVER (HEALTH CHECK)
-* **URL**: `/api/health`
+## 9. MODULE 8: HỆ THỐNG THÔNG BÁO (NOTIFICATIONS)
+Tiền tố route: `/api/notifications` | **Auth**: `Bearer Token`
+* **Màn hình Frontend**: `/(user)/notifications.tsx`
+
+### 9.1. Lấy danh sách thông báo & Số lượng chưa đọc
+* **URL**: `/api/notifications`
 * **Method**: `GET`
-* **Xác thực**: Không (Public)
-* **Response**:
+* **Response Mẫu (200 OK)**:
 ```json
 {
-  "status": "ok",
-  "service": "voucher-platform backend",
-  "timestamp": "2026-10-28T12:30:00.000Z"
+  "success": true,
+  "message": "Lấy danh sách thông báo thành công",
+  "data": {
+    "notifications": [
+      {
+        "_id": "6ae621e8beaaf41707e02c46",
+        "id": "6ae621e8beaaf41707e02c46",
+        "type": "PURCHASE_SUCCESS",
+        "title": "Đơn hàng đã được xác nhận! 🎉",
+        "message": "Voucher Shake Shack của bạn đã được cấp thành công vào ví voucher.",
+        "isRead": false,
+        "actionUrl": "/(user)/wallet",
+        "createdAt": "Vừa xong",
+        "timestamp": "2026-11-01T00:05:00.000Z"
+      }
+    ],
+    "unreadCount": 1
+  }
+}
+```
+
+### 9.2. Đánh dấu 1 thông báo đã đọc
+* **URL**: `/api/notifications/:id/read`
+* **Method**: `PATCH`
+* **Params**: `:id` - ObjectId của thông báo.
+
+### 9.3. Đánh dấu tất cả thông báo là đã đọc
+* **URL**: `/api/notifications/read-all`
+* **Method**: `PATCH`
+
+---
+
+## 10. MODULE 9: CỔNG QUẢN LÝ ĐỐI TÁC & TOÀN SÀN (MANAGER PORTAL)
+Tiền tố route: `/api/manager`  
+**Yêu cầu xác thực**: Bắt buộc Bearer Token và tài khoản có quyền `role: "MANAGER"`.  
+*(Ghi chú: Manager là quản trị viên chung toàn sàn, không bị bó hẹp trong bất kỳ brand nào. Mọi endpoint đều hỗ trợ xem toàn sàn hoặc kèm query `?brandId=...` để lọc)*.
+
+---
+
+### 10.1. Quản lý Thương hiệu Đối tác (Brand Management)
+
+#### A. Lấy danh sách thương hiệu đối tác (Dropdown khi tạo voucher)
+* **URL**: `/api/manager/brands`
+* **Method**: `GET`
+* **Response Mẫu**:
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách thương hiệu đối tác thành công",
+  "data": [
+    {
+      "_id": "6ae621e8beaaf41707e02c29",
+      "name": "Starbucks Coffee",
+      "code": "SB",
+      "rating": 4.9,
+      "logo_url": "https://images.unsplash.com/...",
+      "activeVouchersCount": 2
+    }
+  ]
+}
+```
+
+#### B. Thêm thương hiệu đối tác mới lên sàn
+* **URL**: `/api/manager/brands`
+* **Method**: `POST`
+* **Request Body**:
+```json
+{
+  "name": "Highlands Coffee",
+  "code": "HL",
+  "description": "Cà phê rang xay đậm đà bản sắc Việt Nam",
+  "logo_url": "https://images.unsplash.com/...",
+  "cover_image_url": "https://images.unsplash.com/...",
+  "rating": 4.8
+}
+```
+* **Response Mẫu (201 Created)**: Trả về đối tượng Brand vừa tạo kèm HTTP status 201.
+
+---
+
+### 10.2. Bảng Điều Khiển Thống Kê & KPI (Manager Dashboard)
+* **URL**: `/api/manager/dashboard`
+* **Method**: `GET`
+* **Query Params**: `brandId` *(Tùy chọn: Để trống để xem toàn sàn, hoặc truyền ObjectId để lọc riêng cho thương hiệu đó)*.
+* **Màn hình Frontend**: `/(manager)/(tabs)/dashboard.tsx`
+* **Response Mẫu (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Lấy dữ liệu thống kê dashboard thành công",
+  "data": {
+    "stats": {
+      "activeVouchers": 7,
+      "totalOrders": 3,
+      "issuedVouchers": 3,
+      "simulatedRedemptions": 2,
+      "totalRevenue": 205000
+    },
+    "recentOrders": [
+      {
+        "id": "ORD-94821",
+        "voucherTitle": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu",
+        "brandName": "Starbucks Coffee",
+        "amount": 45000,
+        "status": "PAID",
+        "createdAt": "2026-11-01T00:00:00.000Z"
+      }
+    ],
+    "recentRedemptions": [
+      {
+        "id": "6ae621e8beaaf41707e02c40",
+        "voucherCode": "SB184920",
+        "customerName": "Alex Rivera",
+        "voucherTitle": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu",
+        "redeemedDate": "2026-10-31 22:00",
+        "status": "CONFIRMED"
+      }
+    ]
+  }
 }
 ```
 
 ---
 
-## 🚀 HƯỚNG DẪN KHỞI CHẠY SERVER VÀ NẠP SEED DATA
+### 10.3. Quản lý Chiến Dịch Voucher (Voucher Management)
+* **Màn hình Frontend**: `/(manager)/(tabs)/vouchers.tsx`, `/create.tsx`, `/[id].tsx`, `/[id]/edit.tsx`
+
+#### A. Lấy danh sách Voucher của đối tác
+* **URL**: `/api/manager/vouchers`
+* **Method**: `GET`
+* **Query Params**:
+  * `brandId`: Lọc theo thương hiệu.
+  * `status`: `ALL`, `ACTIVE`, `PAUSED`, `DRAFT`, `ENDED`.
+  * `search`: Tìm theo tiêu đề voucher.
+  * `page`, `limit`.
+
+#### B. Tạo Chiến dịch Voucher mới
+* **URL**: `/api/manager/vouchers`
+* **Method**: `POST`
+* **Request Body**:
+```json
+{
+  "brandId": "6ae621e8beaaf41707e02c29",
+  "title": "Freeze Trà Xanh Giảm 30%",
+  "description": "Trà xanh đá xay thơm bùi kèm thạch giòn sần sật.",
+  "discountType": "PERCENTAGE",
+  "discountValue": 30,
+  "discountDisplay": "GIẢM 30%",
+  "sellingPrice": 38000,
+  "originalValue": 55000,
+  "totalQuantity": 200,
+  "startDate": "2026-11-01",
+  "expirationDate": "2027-12-31",
+  "usageConditions": [
+    "Áp dụng tại tất cả chi nhánh toàn quốc.",
+    "Không áp dụng đồng thời khuyến mãi khác."
+  ],
+  "coverImage": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&auto=format&fit=crop&q=80",
+  "status": "ACTIVE"
+}
+```
+* **Response Mẫu (201 Created)**: Trả về đối tượng Voucher chuẩn format `Voucher` của Frontend.
+
+#### C. Xem chi tiết 1 Voucher
+* **URL**: `/api/manager/vouchers/:id` | **Method**: `GET`
+
+#### D. Chỉnh sửa thông tin Voucher
+* **URL**: `/api/manager/vouchers/:id` | **Method**: `PUT`
+* **Request Body**: Gửi các trường cần cập nhật (`title`, `description`, `sellingPrice`, `originalValue`, `totalQuantity`, `expirationDate`, `usageConditions`).
+
+#### E. Đổi nhanh trạng thái Voucher (Quick Toggle Status)
+* **URL**: `/api/manager/vouchers/:id/status`
+* **Method**: `PATCH`
+* **Request Body**:
+```json
+{
+  "status": "PAUSED"
+}
+```
+
+---
+
+### 10.4. Quản lý Đơn Hàng Đối Tác (Manager Orders)
+* **URL**: `/api/manager/orders`
+* **Method**: `GET`
+* **Màn hình Frontend**: `/(manager)/(tabs)/orders.tsx`
+* **Query Params**: `brandId`, `status` (`ALL`, `PAID`, `PENDING`, `CANCELLED`), `search`, `page`, `limit`.
+* **Response Mẫu (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách đơn hàng đối tác thành công",
+  "data": {
+    "orders": [
+      {
+        "_id": "6ae621e8beaaf41707e02c3f",
+        "id": "ORD-94821",
+        "orderCode": "ORD-94821",
+        "customerName": "Alex Rivera",
+        "customerEmail": "user.alex@example.com",
+        "customerPhone": "0912 345 678",
+        "voucherTitle": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu",
+        "brandName": "Starbucks Coffee",
+        "amount": 45000,
+        "paymentMethod": "Credit Card",
+        "status": "PAID",
+        "createdAt": "2026-11-01T00:00:00.000Z",
+        "voucherCode": "SB184920",
+        "isUsed": true
+      }
+    ],
+    "total": 3,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+---
+
+### 10.5. Nhật Ký Sử Dụng Mã & Xác Thực Tại Quầy (Redemptions & Verification)
+* **Màn hình Frontend**: `/(manager)/(tabs)/redemptions.tsx`
+
+#### A. Lấy lịch sử sử dụng mã voucher tại cửa hàng
+* **URL**: `/api/manager/redemptions`
+* **Method**: `GET`
+* **Query Params**: `brandId`, `search`, `page`, `limit`.
+* **Response Mẫu (Khớp thẻ giao diện ManagerRedemption)**:
+```json
+{
+  "success": true,
+  "message": "Lấy lịch sử sử dụng mã voucher thành công",
+  "data": {
+    "redemptions": [
+      {
+        "id": "6ae621e8beaaf41707e02c40",
+        "voucherId": "6ae621e8beaaf41707e02c36",
+        "voucherTitle": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu",
+        "voucherCode": "SB184920",
+        "customerName": "Alex Rivera",
+        "customerPhone": "0912 345 678",
+        "brandName": "Starbucks Coffee",
+        "redeemedDate": "2026-10-31 22:00",
+        "status": "CONFIRMED"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+#### B. Kiểm tra tính hợp lệ của mã voucher tại quầy (Verify Code)
+* **URL**: `/api/manager/redemptions/verify`
+* **Method**: `POST`
+* **Request Body**:
+```json
+{
+  "voucherCode": "SB184920"
+}
+```
+* **Response Mẫu**:
+```json
+{
+  "success": true,
+  "message": "Kiểm tra mã voucher thành công",
+  "data": {
+    "voucherCode": "SB184920",
+    "validityStatus": "VALID",
+    "validityMessage": "Mã hợp lệ, sẵn sàng áp dụng giảm giá",
+    "isUsed": false,
+    "customer": {
+      "name": "Alex Rivera",
+      "phone": "0912 345 678"
+    },
+    "voucher": {
+      "title": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu",
+      "discountDisplay": "50% OFF",
+      "sellingPrice": 45000,
+      "brandName": "Starbucks Coffee"
+    }
+  }
+}
+```
+
+#### C. Xác nhận đổi voucher tại quầy (Counter Redeem)
+* **URL**: `/api/manager/redemptions/redeem`
+* **Method**: `POST`
+* **Request Body**:
+```json
+{
+  "voucherCode": "SB184920"
+}
+```
+* **Response Mẫu (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Xác nhận đổi voucher tại quầy thành công",
+  "data": {
+    "voucherCode": "SB184920",
+    "status": "CONFIRMED",
+    "redeemedDate": "2026-11-01 00:15",
+    "customerName": "Alex Rivera",
+    "voucherTitle": "Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu"
+  }
+}
+```
+
+---
+
+## 11. KIỂM TRA TRẠNG THÁI SERVER (HEALTH CHECK)
+* **URL**: `/api/health` | **Method**: `GET`
+```json
+{
+  "status": "ok",
+  "service": "voucher-platform backend",
+  "timestamp": "2026-11-01T00:00:00.000Z"
+}
+```
+
+---
+
+## 12. BỘ LỆNH cURL KIỂM THỬ MẪU (QUICK cURL CHEAT SHEET)
 
 ```bash
-# 1. Chuyển vào thư mục backend
-cd voucher-platform
+# 1. Đăng nhập User lấy Token
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user.alex@example.com","password":"Voucher2026!"}'
 
-# 2. Cài đặt dependencies (nếu chưa cài)
-npm install
+# 2. Cập nhật hồ sơ User
+curl -X PUT http://localhost:5000/api/auth/me \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <USER_TOKEN>" \
+  -d '{"full_name":"Alex Rivera Pro","phone":"0988 888 999"}'
 
-# 3. Nạp dữ liệu danh mục, thương hiệu và voucher mẫu bám sát UI
-npm run seed
+# 3. Lấy lịch sử đơn hàng User
+curl -X GET "http://localhost:5000/api/orders?status=ALL" \
+  -H "Authorization: Bearer <USER_TOKEN>"
 
-# 4. Khởi động server
-npm run dev
-# Server sẽ lắng nghe tại cổng http://localhost:5000
+# 4. Lấy danh sách thông báo User
+curl -X GET http://localhost:5000/api/notifications \
+  -H "Authorization: Bearer <USER_TOKEN>"
+
+# 5. Mua voucher (Giao dịch Atomic)
+curl -X POST http://localhost:5000/api/vouchers/<VOUCHER_ID>/buy \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <USER_TOKEN>" \
+  -d '{"paymentMethod":"MoMo E-Wallet"}'
+
+# 6. Đăng nhập Manager
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"manager.sarah@brandhub.com","password":"Manager2026!"}'
+
+# 7. Lấy thống kê Dashboard Manager toàn sàn
+curl -X GET http://localhost:5000/api/manager/dashboard \
+  -H "Authorization: Bearer <MANAGER_TOKEN>"
+
+# 8. Manager tạo thương hiệu đối tác mới
+curl -X POST http://localhost:5000/api/manager/brands \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <MANAGER_TOKEN>" \
+  -d '{"name":"Highlands Coffee","code":"HL","description":"Cà phê rang xay đậm đà"}'
+
+# 9. Manager tạo voucher mới
+curl -X POST http://localhost:5000/api/manager/vouchers \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <MANAGER_TOKEN>" \
+  -d '{
+    "brandId":"<BRAND_ID>",
+    "title":"Freeze Trà Xanh Giảm 30%",
+    "sellingPrice":38000,
+    "originalValue":55000,
+    "totalQuantity":100,
+    "expirationDate":"2027-12-31",
+    "status":"ACTIVE"
+  }'
+
+# 10. Manager kiểm tra mã voucher tại quầy
+curl -X POST http://localhost:5000/api/manager/redemptions/verify \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <MANAGER_TOKEN>" \
+  -d '{"voucherCode":"SB184920"}'
 ```

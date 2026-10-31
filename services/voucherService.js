@@ -3,6 +3,8 @@ const voucherRepository = require('../repositories/voucherRepository');
 const userVoucherRepository = require('../repositories/userVoucherRepository');
 const userRepository = require('../repositories/userRepository');
 const brandRepository = require('../repositories/brandRepository');
+const orderRepository = require('../repositories/orderRepository');
+const notificationRepository = require('../repositories/notificationRepository');
 const { generateUniqueVoucherCode, generateOrderCode } = require('../utils/voucherCodeGenerator');
 const ApiError = require('../utils/ApiError');
 
@@ -171,29 +173,59 @@ async function buyVoucher(voucherId, userId, paymentMethod = 'Credit Card') {
     const brand = await brandRepository.findById(voucher.brandId);
     const brandCode = brand ? brand.code : 'VC';
 
-    // 3. Sinh mã voucher duy nhất: 2 chữ Brand + 6 số ngẫu nhiên (VD: SB184920)
+    // 3. Sinh mã đơn hàng chuẩn (VD: ORD-94821)
+    const orderCode = generateOrderCode();
+
+    // 4. Tạo bản ghi Đơn hàng (Order) trước
+    const purchasedDate = new Date();
+    const order = await orderRepository.create(
+      {
+        orderCode: orderCode,
+        userId: userId,
+        voucherId: voucher._id,
+        brandId: voucher.brandId,
+        walletVoucherId: null,
+        totalAmount: voucher.sellingPrice,
+        paymentMethod: paymentMethod || 'Credit Card',
+        status: 'PAID'
+      },
+      isTransactionActive ? session : null
+    );
+
+    // 5. Sinh mã voucher duy nhất: 2 chữ Brand + 6 số ngẫu nhiên (VD: SB184920)
     const voucherCode = await generateUniqueVoucherCode(
       brandCode,
       isTransactionActive ? session : null
     );
 
-    // 4. Sinh mã đơn hàng (VD: ORD-94821)
-    const orderCode = generateOrderCode();
-
-    // 5. Tạo bản ghi sở hữu vào UserVoucher
-    const purchasedDate = new Date();
-    await userVoucherRepository.create(
+    // 6. Tạo bản ghi sở hữu vào UserVoucher (liên kết với orderId và orderCode)
+    const userVoucher = await userVoucherRepository.create(
       {
         userId: userId,
         voucherId: voucher._id,
-        voucherCode: voucherCode,
+        orderId: order._id,
         orderCode: orderCode,
-        totalAmount: voucher.sellingPrice,
-        paymentMethod: paymentMethod || 'Credit Card',
+        voucherCode: voucherCode,
         is_used: false,
         used_at: null,
         expires_at: voucher.expirationDate,
         purchased_at: purchasedDate
+      },
+      isTransactionActive ? session : null
+    );
+
+    // 7. Cập nhật walletVoucherId trên Order
+    order.walletVoucherId = userVoucher._id;
+    await order.save({ session: isTransactionActive ? session : null });
+
+    // 8. Tạo bản ghi Notification tự động cho User
+    await notificationRepository.create(
+      {
+        userId: userId,
+        type: 'PURCHASE_SUCCESS',
+        title: 'Đặt mua voucher thành công! 🎉',
+        message: `Voucher "${voucher.title}" của thương hiệu ${brand ? brand.name : ''} đã được lưu vào ví của bạn.`,
+        actionUrl: '/(user)/wallet'
       },
       isTransactionActive ? session : null
     );
@@ -203,7 +235,9 @@ async function buyVoucher(voucherId, userId, paymentMethod = 'Credit Card') {
     }
 
     return {
+      orderId: order._id,
       orderCode: orderCode,
+      walletVoucherId: userVoucher._id,
       voucherCode: voucherCode,
       voucherTitle: voucher.title,
       brandName: brand ? brand.name : '',

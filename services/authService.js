@@ -36,7 +36,6 @@ async function register(payload) {
     password: hashedPassword,
     phone: payload.phone || '',
     role: 'USER',
-    assignedBrandId: null,
     avatar_url: payload.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
     status: 'active'
   });
@@ -106,10 +105,36 @@ async function logout() {
   };
 }
 
+async function updateMe(userId, payload) {
+  const user = await userRepository.findById(userId);
+  if (!user) {
+    throw new ApiError(404, 'Không tìm thấy người dùng');
+  }
+
+  const updateFields = {};
+  if (payload.full_name !== undefined) updateFields.full_name = payload.full_name.trim();
+  if (payload.phone !== undefined) updateFields.phone = payload.phone.trim();
+  if (payload.avatar_url !== undefined) updateFields.avatar_url = payload.avatar_url.trim();
+
+  if (payload.email && payload.email.toLowerCase().trim() !== user.email) {
+    const existing = await userRepository.findByEmail(payload.email);
+    if (existing && existing._id.toString() !== userId.toString()) {
+      throw new ApiError(409, 'Email này đã được sử dụng bởi tài khoản khác');
+    }
+    updateFields.email = payload.email.toLowerCase().trim();
+  }
+
+  const updatedUser = await userRepository.updateById(userId, updateFields);
+  return {
+    user: sanitizeUser(updatedUser)
+  };
+}
+
 module.exports = {
   register,
   login,
   getMe,
+  updateMe,
   changePassword,
   logout
 };

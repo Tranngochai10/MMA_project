@@ -1,4 +1,5 @@
 const userVoucherRepository = require('../repositories/userVoucherRepository');
+const notificationRepository = require('../repositories/notificationRepository');
 const ApiError = require('../utils/ApiError');
 
 async function getMyWalletVouchers(userId, status = 'all') {
@@ -29,7 +30,7 @@ async function getMyWalletVouchers(userId, status = 'all') {
       brandName: brand.name || 'Thương hiệu',
       brandLogo: brand.logo_url || '',
       discountDisplay: voucher.discountDisplay || 'Ưu đãi',
-      sellingPrice: uv.totalAmount || voucher.sellingPrice || 0,
+      sellingPrice: voucher.sellingPrice || 0,
       originalValue: voucher.originalValue || 0,
       coverImage: voucher.coverImage || voucher.thumbnail_url || '',
       status: statusKey,
@@ -80,6 +81,15 @@ async function useVoucher(identifier, userId) {
   const updated = await userVoucherRepository.markAsUsed(userVoucher._id, now);
   const voucher = updated.voucherId || {};
   const brand = voucher.brandId || {};
+
+  // 6. Tự động gửi thông báo xác nhận sử dụng voucher
+  await notificationRepository.create({
+    userId: userId,
+    type: 'REDEMPTION_CONFIRMED',
+    title: 'Xác nhận đổi mã ưu đãi',
+    message: `Voucher ${updated.voucherCode} (${voucher.title || 'Ưu đãi'}) đã được xác nhận sử dụng thành công.`,
+    actionUrl: '/(user)/wallet'
+  });
 
   return {
     _id: updated._id,

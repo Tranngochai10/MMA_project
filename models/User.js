@@ -38,11 +38,7 @@ const userSchema = new mongoose.Schema(
       enum: ['active', 'blocked'],
       default: 'active'
     },
-    assignedBrandId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Brand',
-      default: null
-    },
+
     favoriteBrandIds: [
       {
         type: mongoose.Schema.Types.ObjectId,

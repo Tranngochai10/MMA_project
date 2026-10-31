@@ -6,33 +6,48 @@ const Brand = require('../models/Brand');
 const Voucher = require('../models/Voucher');
 const User = require('../models/User');
 const UserVoucher = require('../models/UserVoucher');
+const Order = require('../models/Order');
+const Notification = require('../models/Notification');
 const { hashPassword } = require('../utils/password');
 
 async function seed() {
   console.log('--- BẮT ĐẦU NẠP DỮ LIỆU SEED CHO VOUCHER PLATFORM ---');
   await connectDatabase();
 
-  // 1. Dọn sạch dữ liệu cũ của Category, Brand, Voucher
-  console.log('1. Làm sạch dữ liệu danh mục, thương hiệu và voucher...');
+  // 1. Dọn sạch dữ liệu cũ
+  console.log('1. Làm sạch toàn bộ dữ liệu Category, Brand, Voucher, Order, Notification, UserVoucher...');
   await Category.deleteMany({});
   await Brand.deleteMany({});
   await Voucher.deleteMany({});
+  await Order.deleteMany({});
+  await Notification.deleteMany({});
+  await UserVoucher.deleteMany({});
 
-  // 2. Tạo hoặc lấy tài khoản Manager mẫu để gán managerId cho voucher
-  console.log('2. Khởi tạo tài khoản Manager mẫu...');
-  let manager = await User.findOne({ email: 'manager.sarah@brandhub.com' });
-  if (!manager) {
-    const hashedPassword = await hashPassword('Manager2026!');
-    manager = await User.create({
-      full_name: 'Sarah Jenkins',
-      email: 'manager.sarah@brandhub.com',
-      password: hashedPassword,
-      phone: '+1 (555) 890-1234',
-      role: 'MANAGER',
-      avatar_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&auto=format&fit=crop&q=80',
-      status: 'active'
-    });
-  }
+  // 2. Khởi tạo tài khoản Manager toàn sàn & User mẫu
+  console.log('2. Khởi tạo tài khoản Manager và User thử nghiệm...');
+  await User.deleteMany({ email: { $in: ['manager.sarah@brandhub.com', 'user.alex@example.com'] } });
+
+  const managerPassword = await hashPassword('Manager2026!');
+  const manager = await User.create({
+    full_name: 'Sarah Jenkins',
+    email: 'manager.sarah@brandhub.com',
+    password: managerPassword,
+    phone: '+1 (555) 890-1234',
+    role: 'MANAGER',
+    avatar_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&auto=format&fit=crop&q=80',
+    status: 'active'
+  });
+
+  const userPassword = await hashPassword('Voucher2026!');
+  const demoUser = await User.create({
+    full_name: 'Alex Rivera',
+    email: 'user.alex@example.com',
+    password: userPassword,
+    phone: '0912 345 678',
+    role: 'USER',
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+    status: 'active'
+  });
 
   // 3. Khởi tạo Danh mục (Categories)
   console.log('3. Khởi tạo 8 danh mục ngành hàng...');
@@ -53,7 +68,7 @@ async function seed() {
     return acc;
   }, {});
 
-  // 4. Khởi tạo Thương hiệu (Brands) bám sát UI (mã 2 chữ cái độc nhất)
+  // 4. Khởi tạo Thương hiệu (Brands)
   console.log('4. Khởi tạo 6 thương hiệu chuẩn mã 2 chữ cái...');
   const brandsData = [
     {
@@ -120,18 +135,17 @@ async function seed() {
 
   const createdBrands = await Brand.insertMany(brandsData);
   const brandMap = createdBrands.reduce((acc, brand) => {
-    acc[brand.code] = brand._id;
+    acc[brand.code] = brand;
     return acc;
   }, {});
 
-  // 5. Khởi tạo danh sách Voucher phong phú
+  // 5. Khởi tạo danh sách Voucher
   console.log('5. Khởi tạo các chương trình ưu đãi Voucher hấp dẫn...');
   const nextYear = new Date('2027-06-30T23:59:59.000Z');
 
   const vouchersData = [
-    // Starbucks
     {
-      brandId: brandMap['SB'],
+      brandId: brandMap['SB']._id,
       categoryId: catMap['coffee-tea'],
       managerId: manager._id,
       title: 'Giảm 50% Toàn Bộ Menu Đồ Uống Mùa Thu',
@@ -142,7 +156,7 @@ async function seed() {
       sellingPrice: 45000,
       originalValue: 90000,
       totalQuantity: 100,
-      availableQuantity: 95,
+      availableQuantity: 94,
       expirationDate: nextYear,
       termsAndConditions: [
         'Áp dụng tại tất cả các cửa hàng Starbucks Việt Nam.',
@@ -155,7 +169,7 @@ async function seed() {
       status: 'ACTIVE'
     },
     {
-      brandId: brandMap['SB'],
+      brandId: brandMap['SB']._id,
       categoryId: catMap['coffee-tea'],
       managerId: manager._id,
       title: 'Voucher Mua 1 Tặng 1 Cà Phê Cold Brew',
@@ -176,10 +190,8 @@ async function seed() {
       thumbnail_url: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=400&auto=format&fit=crop&q=80',
       status: 'ACTIVE'
     },
-
-    // Shake Shack
     {
-      brandId: brandMap['SS'],
+      brandId: brandMap['SS']._id,
       categoryId: catMap['food-dining'],
       managerId: manager._id,
       title: 'Giảm 40% ShackBurger Kèm Khoai Tây Chiên Lượn Sóng',
@@ -200,10 +212,8 @@ async function seed() {
       thumbnail_url: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&auto=format&fit=crop&q=80',
       status: 'ACTIVE'
     },
-
-    // AMC Theatres
     {
-      brandId: brandMap['AT'],
+      brandId: brandMap['AT']._id,
       categoryId: catMap['entertainment'],
       managerId: manager._id,
       title: 'Vé Xem Phim 2D/3D Bom Tấn Kèm Bắp Rang Lớn',
@@ -224,10 +234,8 @@ async function seed() {
       thumbnail_url: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=400&auto=format&fit=crop&q=80',
       status: 'ACTIVE'
     },
-
-    // Spotify
     {
-      brandId: brandMap['SF'],
+      brandId: brandMap['SF']._id,
       categoryId: catMap['entertainment'],
       managerId: manager._id,
       title: 'Tặng 03 Tháng Spotify Premium Nghe Nhạc Bản Quyền',
@@ -248,10 +256,8 @@ async function seed() {
       thumbnail_url: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=80',
       status: 'ACTIVE'
     },
-
-    // Apple
     {
-      brandId: brandMap['AP'],
+      brandId: brandMap['AP']._id,
       categoryId: catMap['tech-gadgets'],
       managerId: manager._id,
       title: 'Giảm 500.000đ Khi Mua Phụ Kiện AirPods & Củ Sạc Nhanh',
@@ -272,10 +278,8 @@ async function seed() {
       thumbnail_url: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&auto=format&fit=crop&q=80',
       status: 'ACTIVE'
     },
-
-    // Sephora
     {
-      brandId: brandMap['SP'],
+      brandId: brandMap['SP']._id,
       categoryId: catMap['beauty-spa'],
       managerId: manager._id,
       title: 'Giảm 35% Toàn Bộ Nước Hoa Cao Cấp & Skincare',
@@ -298,12 +302,127 @@ async function seed() {
     }
   ];
 
-  await Voucher.insertMany(vouchersData);
+  const createdVouchers = await Voucher.insertMany(vouchersData);
+
+  // 6. Khởi tạo một số Đơn hàng (Orders), UserVoucher và Lượt đổi mã mẫu
+  console.log('6. Khởi tạo Đơn hàng mẫu và Lịch sử đổi mã tại quầy...');
+  const starbucksVoucher = createdVouchers[0];
+  const shakeShackVoucher = createdVouchers[2];
+  const amcVoucher = createdVouchers[3];
+
+  // Order 1: Starbucks - Đã thanh toán & đã dùng tại quầy
+  const order1 = await Order.create({
+    orderCode: 'ORD-94821',
+    userId: demoUser._id,
+    voucherId: starbucksVoucher._id,
+    brandId: brandMap['SB']._id,
+    totalAmount: starbucksVoucher.sellingPrice,
+    paymentMethod: 'Credit Card',
+    status: 'PAID'
+  });
+
+  const userVoucher1 = await UserVoucher.create({
+    userId: demoUser._id,
+    voucherId: starbucksVoucher._id,
+    orderId: order1._id,
+    orderCode: order1.orderCode,
+    voucherCode: 'SB184920',
+    is_used: true,
+    used_at: new Date(Date.now() - 3600000 * 2), // 2 giờ trước
+    expires_at: starbucksVoucher.expirationDate,
+    purchased_at: new Date(Date.now() - 86400000)
+  });
+
+  order1.walletVoucherId = userVoucher1._id;
+  await order1.save();
+
+  // Order 2: Shake Shack - Đã thanh toán & khả dụng trong ví
+  const order2 = await Order.create({
+    orderCode: 'ORD-71500',
+    userId: demoUser._id,
+    voucherId: shakeShackVoucher._id,
+    brandId: brandMap['SS']._id,
+    totalAmount: shakeShackVoucher.sellingPrice,
+    paymentMethod: 'MoMo E-Wallet',
+    status: 'PAID'
+  });
+
+  const userVoucher2 = await UserVoucher.create({
+    userId: demoUser._id,
+    voucherId: shakeShackVoucher._id,
+    orderId: order2._id,
+    orderCode: order2.orderCode,
+    voucherCode: 'SS829104',
+    is_used: false,
+    used_at: null,
+    expires_at: shakeShackVoucher.expirationDate,
+    purchased_at: new Date(Date.now() - 1800000)
+  });
+
+  order2.walletVoucherId = userVoucher2._id;
+  await order2.save();
+
+  // Order 3: AMC Theatres - Đã thanh toán & đã đổi vé tại rạp
+  const order3 = await Order.create({
+    orderCode: 'ORD-30219',
+    userId: demoUser._id,
+    voucherId: amcVoucher._id,
+    brandId: brandMap['AT']._id,
+    totalAmount: amcVoucher.sellingPrice,
+    paymentMethod: 'Credit Card',
+    status: 'PAID'
+  });
+
+  const userVoucher3 = await UserVoucher.create({
+    userId: demoUser._id,
+    voucherId: amcVoucher._id,
+    orderId: order3._id,
+    orderCode: order3.orderCode,
+    voucherCode: 'AT994012',
+    is_used: true,
+    used_at: new Date(Date.now() - 3600000 * 5),
+    expires_at: amcVoucher.expirationDate,
+    purchased_at: new Date(Date.now() - 86400000 * 2)
+  });
+
+  order3.walletVoucherId = userVoucher3._id;
+  await order3.save();
+
+  // 7. Khởi tạo Thông báo mẫu cho User
+  console.log('7. Khởi tạo thông báo mẫu...');
+  await Notification.insertMany([
+    {
+      userId: demoUser._id,
+      type: 'PURCHASE_SUCCESS',
+      title: 'Đơn hàng đã được xác nhận! 🎉',
+      message: 'Voucher Shake Shack của bạn đã được cấp thành công vào ví voucher.',
+      isRead: false,
+      actionUrl: '/(user)/wallet'
+    },
+    {
+      userId: demoUser._id,
+      type: 'REDEMPTION_CONFIRMED',
+      title: 'Đổi voucher tại quầy thành công',
+      message: 'Mã voucher SB184920 (Starbucks Coffee) đã được xác thực sử dụng.',
+      isRead: true,
+      actionUrl: '/(user)/wallet'
+    },
+    {
+      userId: demoUser._id,
+      type: 'PROMO',
+      title: 'Ưu Đãi Đặc Biệt Mùa Lễ Hội ✨',
+      message: 'Hàng ngàn mã giảm giá độc quyền từ Apple và Sephora đã sẵn sàng.',
+      isRead: true,
+      actionUrl: '/(user)/discover'
+    }
+  ]);
 
   console.log('--- HOÀN TẤT SEED DỮ LIỆU THÀNH CÔNG! ---');
   console.log(`- Categories: ${createdCategories.length}`);
   console.log(`- Brands: ${createdBrands.length}`);
-  console.log(`- Vouchers: ${vouchersData.length}`);
+  console.log(`- Vouchers: ${createdVouchers.length}`);
+  console.log(`- Demo Manager: manager.sarah@brandhub.com / Manager2026! (Role: MANAGER)`);
+  console.log(`- Demo User: user.alex@example.com / Voucher2026! (Role: USER)`);
   process.exit(0);
 }
 
