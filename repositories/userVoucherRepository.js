@@ -56,13 +56,13 @@ async function findByIdOrCode(identifier, session = null) {
   if (mongoose.Types.ObjectId.isValid(identifier)) {
     query = UserVoucher.findById(identifier).populate({
       path: 'voucherId',
-      select: 'title description discountDisplay sellingPrice originalValue coverImage thumbnail_url brandId categoryId',
+      select: 'title description discountDisplay sellingPrice originalValue coverImage thumbnail_url termsAndConditions usageConditions brandId categoryId',
       populate: { path: 'brandId', select: 'name code logo_url' }
     });
   } else {
     query = UserVoucher.findOne({ voucherCode: identifier.toUpperCase().trim() }).populate({
       path: 'voucherId',
-      select: 'title description discountDisplay sellingPrice originalValue coverImage thumbnail_url brandId categoryId',
+      select: 'title description discountDisplay sellingPrice originalValue coverImage thumbnail_url termsAndConditions usageConditions brandId categoryId',
       populate: { path: 'brandId', select: 'name code logo_url' }
     });
   }

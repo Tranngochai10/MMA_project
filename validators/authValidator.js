@@ -103,8 +103,69 @@ function validateChangePassword(req, res, next) {
   return next();
 }
 
+function validateForgotPassword(req, res, next) {
+  const errors = [];
+  const body = req.body || {};
+  const email = getString(body.email).toLowerCase();
+
+  if (!email) {
+    errors.push({ field: 'email', message: 'Email là bắt buộc' });
+  } else if (!EMAIL_PATTERN.test(email)) {
+    errors.push({ field: 'email', message: 'Định dạng email không hợp lệ' });
+  }
+
+  if (errors.length) {
+    return next(new ApiError(400, 'Dữ liệu không hợp lệ', errors));
+  }
+
+  req.validatedBody = {
+    email: email
+  };
+
+  return next();
+}
+
+function validateResetPassword(req, res, next) {
+  const errors = [];
+  const body = req.body || {};
+  const email = getString(body.email).toLowerCase();
+  const otp = getString(body.otp || body.reset_token || body.code);
+  const newPassword = getString(body.new_password || body.password);
+
+  if (!email) {
+    errors.push({ field: 'email', message: 'Email là bắt buộc' });
+  } else if (!EMAIL_PATTERN.test(email)) {
+    errors.push({ field: 'email', message: 'Định dạng email không hợp lệ' });
+  }
+
+  if (!otp) {
+    errors.push({ field: 'otp', message: 'Mã xác thực OTP là bắt buộc' });
+  }
+
+  if (!newPassword) {
+    errors.push({ field: 'new_password', message: 'Mật khẩu mới là bắt buộc' });
+  } else if (newPassword.length < 6) {
+    errors.push({ field: 'new_password', message: 'Mật khẩu mới phải chứa ít nhất 6 ký tự' });
+  }
+
+  if (errors.length) {
+    return next(new ApiError(400, 'Dữ liệu không hợp lệ', errors));
+  }
+
+  req.validatedBody = {
+    email: email,
+    otp: otp,
+    new_password: newPassword
+  };
+
+  return next();
+}
+
 module.exports = {
   validateRegister,
   validateLogin,
-  validateChangePassword
+  validateChangePassword,
+  validateForgotPassword,
+  validateResetPassword
 };
+

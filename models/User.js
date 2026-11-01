@@ -50,7 +50,15 @@ const userSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Voucher'
       }
-    ]
+    ],
+    resetOtp: {
+      type: String,
+      default: null
+    },
+    resetOtpExpires: {
+      type: Date,
+      default: null
+    }
   },
   {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }

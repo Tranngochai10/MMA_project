@@ -109,7 +109,72 @@ async function useVoucher(identifier, userId) {
   };
 }
 
+async function getWalletVoucherById(identifier, userId) {
+  if (!identifier) {
+    throw new ApiError(400, 'Mã voucher hoặc ID không được để trống');
+  }
+
+  const userVoucher = await userVoucherRepository.findByIdOrCode(identifier);
+  if (!userVoucher) {
+    throw new ApiError(404, 'Không tìm thấy voucher trong ví');
+  }
+
+  const ownerId = userVoucher.userId._id
+    ? userVoucher.userId._id.toString()
+    : userVoucher.userId.toString();
+
+  if (ownerId !== userId.toString()) {
+    throw new ApiError(403, 'Bạn không có quyền truy cập voucher này');
+  }
+
+  const voucher = userVoucher.voucherId || {};
+  const brand = voucher.brandId || {};
+  const now = new Date();
+
+  let statusKey = 'AVAILABLE';
+  let statusText = 'Khả dụng';
+
+  if (userVoucher.is_used) {
+    statusKey = 'REDEEMED';
+    statusText = 'Đã dùng';
+  } else if (new Date(userVoucher.expires_at) <= now) {
+    statusKey = 'EXPIRED';
+    statusText = 'Hết hạn';
+  }
+
+  const conditions = Array.isArray(voucher.termsAndConditions) && voucher.termsAndConditions.length
+    ? voucher.termsAndConditions
+    : Array.isArray(voucher.usageConditions) && voucher.usageConditions.length
+    ? voucher.usageConditions
+    : ['Áp dụng quy định đổi voucher tiêu chuẩn của thương hiệu.'];
+
+  return {
+    _id: userVoucher._id,
+    id: userVoucher._id.toString(),
+    voucherId: voucher._id || null,
+    voucherCode: userVoucher.voucherCode,
+    orderCode: userVoucher.orderCode || '',
+    title: voucher.title || 'Ưu đãi voucher',
+    brandName: brand.name || 'Thương hiệu',
+    brandLogo: brand.logo_url || '',
+    discountDisplay: voucher.discountDisplay || 'Ưu đãi',
+    sellingPrice: voucher.sellingPrice || 0,
+    originalValue: voucher.originalValue || 0,
+    coverImage: voucher.coverImage || voucher.thumbnail_url || '',
+    usageConditions: conditions,
+    termsAndConditions: conditions,
+    status: statusKey,
+    statusText: statusText,
+    isUsed: userVoucher.is_used,
+    usedAt: userVoucher.used_at ? userVoucher.used_at.toISOString() : null,
+    redeemedDate: userVoucher.used_at ? userVoucher.used_at.toISOString() : null,
+    expirationDate: userVoucher.expires_at ? userVoucher.expires_at.toISOString() : null,
+    purchasedDate: userVoucher.purchased_at ? userVoucher.purchased_at.toISOString() : null
+  };
+}
+
 module.exports = {
   getMyWalletVouchers,
+  getWalletVoucherById,
   useVoucher
 };

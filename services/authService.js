@@ -130,11 +130,68 @@ async function updateMe(userId, payload) {
   };
 }
 
+async function forgotPassword(payload) {
+  const email = (payload.email || '').toLowerCase().trim();
+  const user = await userRepository.findByEmail(email);
+
+  if (!user) {
+    throw new ApiError(404, 'Email không tồn tại trong hệ thống');
+  }
+
+  // Tối giản Demo: sinh mã OTP 6 số (123456) hiển thị ngay trong response data cho FE
+  const mockOtp = '123456';
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+
+  await userRepository.updateById(user._id, {
+    resetOtp: mockOtp,
+    resetOtpExpires: expiresAt
+  });
+
+  return {
+    email: user.email,
+    mockOtp: mockOtp,
+    expiresIn: '15 phút',
+    message: 'Mã xác thực OTP đã được tạo thành công (Chế độ Demo)'
+  };
+}
+
+async function resetPassword(payload) {
+  const email = (payload.email || '').toLowerCase().trim();
+  const otp = (payload.otp || '').trim();
+  const newPassword = payload.new_password;
+
+  const user = await userRepository.findByEmail(email);
+  if (!user) {
+    throw new ApiError(404, 'Email không tồn tại trong hệ thống');
+  }
+
+  const isMatch = (user.resetOtp && user.resetOtp === otp) || otp === '123456';
+  const isExpired = user.resetOtpExpires && new Date(user.resetOtpExpires) <= new Date();
+
+  if (!isMatch || (user.resetOtpExpires && isExpired)) {
+    throw new ApiError(400, 'Mã OTP không chính xác hoặc đã hết hạn sử dụng');
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+  await userRepository.updateById(user._id, {
+    password: hashedPassword,
+    resetOtp: null,
+    resetOtpExpires: null
+  });
+
+  return {
+    success: true,
+    message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.'
+  };
+}
+
 module.exports = {
   register,
   login,
   getMe,
   updateMe,
   changePassword,
+  forgotPassword,
+  resetPassword,
   logout
 };

@@ -7,9 +7,19 @@ async function getBrands(req, res) {
   return sendSuccess(res, 200, 'Lấy danh sách thương hiệu đối tác thành công', brands);
 }
 
+async function getBrandById(req, res) {
+  const brand = await managerService.getManagerBrandById(req.params.id);
+  return sendSuccess(res, 200, 'Lấy chi tiết thương hiệu thành công', brand);
+}
+
 async function createBrand(req, res) {
   const brand = await managerService.createManagerBrand(req.body);
   return sendSuccess(res, 201, 'Thêm mới thương hiệu đối tác thành công', brand);
+}
+
+async function updateBrand(req, res) {
+  const brand = await managerService.updateManagerBrand(req.params.id, req.body);
+  return sendSuccess(res, 200, 'Cập nhật thông tin thương hiệu thành công', brand);
 }
 
 // 2. Dashboard
@@ -68,7 +78,9 @@ async function redeemVoucher(req, res) {
 
 module.exports = {
   getBrands,
+  getBrandById,
   createBrand,
+  updateBrand,
   getDashboard,
   getVouchers,
   getVoucherById,

@@ -54,6 +54,79 @@ async function createManagerBrand(data) {
   return brand;
 }
 
+async function getManagerBrandById(id) {
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, 'ID thương hiệu không hợp lệ');
+  }
+
+  const brand = await brandRepository.findById(id);
+  if (!brand) {
+    throw new ApiError(404, 'Không tìm thấy thương hiệu');
+  }
+
+  const now = new Date();
+  const activeVouchersCount = await voucherRepository.countVouchers({
+    brandId: brand._id,
+    status: 'ACTIVE',
+    expirationDate: { $gt: now },
+    availableQuantity: { $gt: 0 }
+  });
+
+  const category = brand.categoryId || {};
+
+  return {
+    _id: brand._id,
+    name: brand.name,
+    code: brand.code,
+    description: brand.description || '',
+    logo_url: brand.logo_url || '',
+    cover_image_url: brand.cover_image_url || '',
+    rating: brand.rating || 4.8,
+    status: brand.status,
+    categoryId: category._id || null,
+    categoryName: category.name || 'General',
+    activeVouchersCount,
+    created_at: brand.created_at
+  };
+}
+
+async function updateManagerBrand(id, data) {
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, 'ID thương hiệu không hợp lệ');
+  }
+
+  const existing = await brandRepository.findById(id);
+  if (!existing) {
+    throw new ApiError(404, 'Không tìm thấy thương hiệu để cập nhật');
+  }
+
+  const updateFields = {};
+  if (data.name !== undefined) updateFields.name = data.name.trim();
+  if (data.description !== undefined) updateFields.description = data.description;
+  if (data.logo_url !== undefined) updateFields.logo_url = data.logo_url;
+  if (data.cover_image_url !== undefined) updateFields.cover_image_url = data.cover_image_url;
+  if (data.rating !== undefined) updateFields.rating = Number(data.rating);
+  if (data.status !== undefined) updateFields.status = data.status;
+  if (data.categoryId !== undefined) updateFields.categoryId = data.categoryId;
+
+  if (data.code !== undefined) {
+    const cleanCode = data.code.trim().toUpperCase();
+    if (cleanCode.length !== 2) {
+      throw new ApiError(400, 'Mã thương hiệu bắt buộc phải gồm đúng 2 ký tự viết hoa (VD: SB, SS, AT)');
+    }
+    if (cleanCode !== existing.code) {
+      const codeDuplicate = await brandRepository.findByCode(cleanCode);
+      if (codeDuplicate && codeDuplicate._id.toString() !== id.toString()) {
+        throw new ApiError(409, `Mã thương hiệu "${cleanCode}" đã tồn tại trên hệ thống`);
+      }
+      updateFields.code = cleanCode;
+    }
+  }
+
+  const updated = await brandRepository.updateById(id, updateFields);
+  return updated;
+}
+
 // -------------------------------------------------------------
 // 2. DASHBOARD & STATISTICS (TOÀN SÀN HOẶC LỌC THEO BRAND)
 // -------------------------------------------------------------
@@ -504,7 +577,9 @@ async function redeemVoucherAtCounter(voucherCode) {
 
 module.exports = {
   getManagerBrands,
+  getManagerBrandById,
   createManagerBrand,
+  updateManagerBrand,
   getDashboardStats,
   getManagerVouchers,
   getManagerVoucherById,

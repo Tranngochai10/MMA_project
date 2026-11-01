@@ -11,6 +11,9 @@ router.use(authenticate);
 // Lấy danh sách ví voucher
 router.get('/', asyncHandler(userVoucherController.getMyWallet));
 
+// Lấy chi tiết 1 voucher trong ví (hỗ trợ _id hoặc voucherCode)
+router.get('/:id', asyncHandler(userVoucherController.getWalletVoucherById));
+
 // Sử dụng voucher (hỗ trợ cả PATCH /:id/use, POST /:id/use và POST /use kèm body)
 router.patch('/:id/use', asyncHandler(userVoucherController.useVoucher));
 router.post('/:id/use', asyncHandler(userVoucherController.useVoucher));

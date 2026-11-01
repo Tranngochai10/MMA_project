@@ -26,6 +26,16 @@ async function changePassword(req, res) {
   return sendSuccess(res, 200, 'Đổi mật khẩu thành công', data);
 }
 
+async function forgotPassword(req, res) {
+  const data = await authService.forgotPassword(req.validatedBody || req.body);
+  return sendSuccess(res, 200, 'Tạo mã OTP khôi phục mật khẩu thành công', data);
+}
+
+async function resetPassword(req, res) {
+  const data = await authService.resetPassword(req.validatedBody || req.body);
+  return sendSuccess(res, 200, 'Đặt lại mật khẩu thành công', data);
+}
+
 async function logout(req, res) {
   const data = await authService.logout();
   return sendSuccess(res, 200, 'Đăng xuất thành công', data);
@@ -37,5 +47,8 @@ module.exports = {
   getMe,
   updateMe,
   changePassword,
+  forgotPassword,
+  resetPassword,
   logout
 };
+

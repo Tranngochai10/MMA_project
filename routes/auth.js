@@ -5,8 +5,10 @@ const authenticate = require('../middlewares/authenticate');
 const asyncHandler = require('../utils/asyncHandler');
 const {
   validateChangePassword,
+  validateForgotPassword,
   validateLogin,
-  validateRegister
+  validateRegister,
+  validateResetPassword
 } = require('../validators/authValidator');
 
 const router = express.Router();
@@ -14,6 +16,8 @@ const router = express.Router();
 // Public routes
 router.post('/register', validateRegister, asyncHandler(authController.register));
 router.post('/login', validateLogin, asyncHandler(authController.login));
+router.post('/forgot-password', validateForgotPassword, asyncHandler(authController.forgotPassword));
+router.post('/reset-password', validateResetPassword, asyncHandler(authController.resetPassword));
 
 // Protected routes (Requires Bearer Token)
 router.get('/me', authenticate, asyncHandler(authController.getMe));

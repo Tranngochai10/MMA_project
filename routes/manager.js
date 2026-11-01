@@ -13,6 +13,8 @@ router.use(authenticate, authorizeRoles(ROLES.MANAGER));
 // 1. Quản lý Thương hiệu Đối tác (Brand Management)
 router.get('/brands', asyncHandler(managerController.getBrands));
 router.post('/brands', asyncHandler(managerController.createBrand));
+router.get('/brands/:id', asyncHandler(managerController.getBrandById));
+router.put('/brands/:id', asyncHandler(managerController.updateBrand));
 
 // 2. Thống kê & Dashboard
 router.get('/dashboard', asyncHandler(managerController.getDashboard));

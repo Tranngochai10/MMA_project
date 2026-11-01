@@ -143,10 +143,19 @@ async function create(data) {
   return brand.save();
 }
 
+async function updateById(id, updateData) {
+  return Brand.findByIdAndUpdate(id, updateData, { returnDocument: 'after' }).populate(
+    'categoryId',
+    'name slug icon'
+  );
+}
+
 module.exports = {
   findAllWithActiveVoucherCount,
   findById,
   findByCode,
   findByIds,
-  create
+  create,
+  updateById
 };
+

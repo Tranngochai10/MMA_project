@@ -152,11 +152,51 @@ Tiền tố route: `/api/auth`
 }
 ```
 
-### 2.5. Đổi mật khẩu (Change Password)
+### 2.5. Quên mật khẩu (Forgot Password - Demo)
+* **URL**: `/api/auth/forgot-password` | **Method**: `POST` | **Auth**: Không
+* **Request Body**:
+```json
+{
+  "email": "user.alex@example.com"
+}
+```
+* **Response Mẫu (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Tạo mã OTP khôi phục mật khẩu thành công",
+  "data": {
+    "email": "user.alex@example.com",
+    "mockOtp": "123456",
+    "expiresIn": "15 phút",
+    "message": "Mã xác thực OTP đã được tạo thành công (Chế độ Demo)"
+  }
+}
+```
+
+### 2.6. Đặt lại mật khẩu (Reset Password - Demo)
+* **URL**: `/api/auth/reset-password` | **Method**: `POST` | **Auth**: Không
+* **Request Body**:
+```json
+{
+  "email": "user.alex@example.com",
+  "otp": "123456",
+  "new_password": "NewPassword2026!"
+}
+```
+* **Response Mẫu (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Đặt lại mật khẩu thành công"
+}
+```
+
+### 2.7. Đổi mật khẩu (Change Password)
 * **URL**: `/api/auth/change-password` | **Method**: `POST` | **Auth**: `Bearer Token`
 * **Request Body**: `{ "current_password": "...", "new_password": "..." }`
 
-### 2.6. Đăng xuất (Logout)
+### 2.8. Đăng xuất (Logout)
 * **URL**: `/api/auth/logout` | **Method**: `POST` | **Auth**: `Bearer Token`
 
 ---
@@ -308,7 +348,43 @@ Tiền tố route: `/api/user-vouchers` | **Auth**: `Bearer Token`
 }
 ```
 
-### 7.2. Sử dụng Voucher (Use Voucher)
+### 7.2. Lấy chi tiết 1 Voucher trong ví (Wallet Voucher Detail)
+* **URL**: `/api/user-vouchers/:id` | **Method**: `GET` | **Auth**: `Bearer Token`
+* **Màn hình Frontend**: `/(user)/wallet/[id].tsx`
+* **Params**: `:id` - Hỗ trợ truyền `_id` hoặc mã `voucherCode` (VD: `SS829104`).
+* **Response Mẫu (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Lấy chi tiết voucher trong ví thành công",
+  "data": {
+    "_id": "6ae621e8beaaf41707e02c42",
+    "id": "6ae621e8beaaf41707e02c42",
+    "voucherId": "6ae621e8beaaf41707e02c38",
+    "voucherCode": "SS829104",
+    "orderCode": "ORD-71500",
+    "title": "Giảm 40% ShackBurger Kèm Khoai Tây Chiên Lượn Sóng",
+    "brandName": "Shake Shack",
+    "brandLogo": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&auto=format&fit=crop&q=80",
+    "discountDisplay": "40% OFF",
+    "sellingPrice": 75000,
+    "originalValue": 125000,
+    "coverImage": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&auto=format&fit=crop&q=80",
+    "usageConditions": [
+      "Áp dụng tại tất cả chi nhánh toàn quốc.",
+      "Không áp dụng đồng thời khuyến mãi khác."
+    ],
+    "status": "AVAILABLE",
+    "statusText": "Khả dụng",
+    "isUsed": false,
+    "usedAt": null,
+    "expirationDate": "2027-06-30T23:59:59.000Z",
+    "purchasedDate": "2026-11-01T00:00:00.000Z"
+  }
+}
+```
+
+### 7.3. Sử dụng Voucher (Use Voucher)
 * **URL**: `/api/user-vouchers/:id/use` *(Hỗ trợ `PATCH` và `POST`)*
 * **Params**: `:id` - Truyền `_id` hoặc mã `voucherCode` (VD: `SS829104`).
 * **Nghiệp vụ**: Cập nhật `is_used = true`, ghi nhận `used_at = now`, và tự động phát thông báo `REDEMPTION_CONFIRMED`.
@@ -470,6 +546,17 @@ Tiền tố route: `/api/manager`
 }
 ```
 * **Response Mẫu (201 Created)**: Trả về đối tượng Brand vừa tạo kèm HTTP status 201.
+
+#### C. Xem chi tiết 1 thương hiệu đối tác
+* **URL**: `/api/manager/brands/:id`
+* **Method**: `GET`
+* **Response Mẫu (200 OK)**: Trả về chi tiết thương hiệu, danh mục và số lượng voucher đang hoạt động (`activeVouchersCount`).
+
+#### D. Chỉnh sửa thông tin thương hiệu
+* **URL**: `/api/manager/brands/:id`
+* **Method**: `PUT`
+* **Request Body**: Gửi các trường cần cập nhật (`name`, `description`, `logo_url`, `cover_image_url`, `rating`, `categoryId`, `status`).
+* **Response Mẫu (200 OK)**: Trả về đối tượng thương hiệu sau cập nhật.
 
 ---
 

@@ -7,6 +7,11 @@ async function getMyWallet(req, res) {
   return sendSuccess(res, 200, 'Lấy danh sách ví voucher thành công', vouchers);
 }
 
+async function getWalletVoucherById(req, res) {
+  const voucher = await userVoucherService.getWalletVoucherById(req.params.id, req.user._id);
+  return sendSuccess(res, 200, 'Lấy chi tiết voucher trong ví thành công', voucher);
+}
+
 async function useVoucher(req, res) {
   const identifier = req.params.id || (req.body && req.body.voucherCode);
   const result = await userVoucherService.useVoucher(identifier, req.user._id);
@@ -15,5 +20,6 @@ async function useVoucher(req, res) {
 
 module.exports = {
   getMyWallet,
+  getWalletVoucherById,
   useVoucher
 };
