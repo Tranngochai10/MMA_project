@@ -10,14 +10,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../components/common/ScreenContainer';
 import { FormInput } from '../components/common/FormInput';
 import { PrimaryButton } from '../components/common/PrimaryButton';
-import { SuccessModal } from '../components/common/SuccessModal';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleSendLink = () => {
     if (!email.trim()) {
@@ -29,21 +26,7 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    setError('');
-    setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
-      setShowSuccessModal(true);
-    }, 700);
-  };
-
-  const handleModalClose = () => {
-    setShowSuccessModal(false);
-    router.push({
-      pathname: '/reset-password',
-      params: { email },
-    });
+    setError('Backend hiện chưa có API gửi liên kết đặt lại mật khẩu. Vui lòng liên hệ bộ phận hỗ trợ.');
   };
 
   return (
@@ -73,7 +56,7 @@ export default function ForgotPasswordScreen() {
         <View style={styles.simulationBadge}>
           <Ionicons name="information-circle-outline" size={16} color={Colors.primaryCoral} />
           <Text style={styles.simulationText}>
-            Quy trình thử nghiệm — bạn có thể nhập email bất kỳ để tiếp tục.
+            Tính năng đặt lại mật khẩu chưa được backend hỗ trợ.
           </Text>
         </View>
 
@@ -94,9 +77,8 @@ export default function ForgotPasswordScreen() {
           />
 
           <PrimaryButton
-            title="Gửi liên kết đặt lại"
+            title="Kiểm tra hỗ trợ đặt lại"
             onPress={handleSendLink}
-            loading={loading}
             style={styles.sendButton}
           />
 
@@ -111,14 +93,6 @@ export default function ForgotPasswordScreen() {
         </View>
       </View>
 
-      <SuccessModal
-        visible={showSuccessModal}
-        title="Kiểm tra hộp thư của bạn"
-        message={`Nếu tài khoản tồn tại cho ${email}, hướng dẫn đặt lại mật khẩu đã được gửi.`}
-        subMessage="Chế độ thử nghiệm: Nhấn nút bên dưới để tiến hành đặt mật khẩu mới."
-        buttonLabel="Tiến hành đặt lại mật khẩu"
-        onClose={handleModalClose}
-      />
     </ScreenContainer>
   );
 }

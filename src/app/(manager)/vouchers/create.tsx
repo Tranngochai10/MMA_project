@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   TouchableOpacity,
@@ -15,21 +16,19 @@ import { AppHeader } from '../../../components/common/AppHeader';
 import { FormInput } from '../../../components/common/FormInput';
 import { PrimaryButton } from '../../../components/common/PrimaryButton';
 import { SecondaryButton } from '../../../components/common/SecondaryButton';
-import { SuccessModal } from '../../../components/common/SuccessModal';
 import { CATEGORIES } from '../../../constants/categories';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../../constants/theme';
 import { useApp } from '../../../context/AppContext';
-import { DiscountType, VoucherCategory, VoucherStatus } from '../../../types';
+import { VoucherCategory, VoucherStatus } from '../../../types';
 
 export default function CreateVoucherScreen() {
-  const { currentUser, createVoucher } = useApp();
+  const { currentUser } = useApp();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<VoucherCategory>('Food & Dining');
   const [originalValue, setOriginalValue] = useState('20.00');
   const [sellingPrice, setSellingPrice] = useState('10.00');
-  const [discountType, setDiscountType] = useState<DiscountType>('PERCENTAGE');
   const [discountValue, setDiscountValue] = useState('50');
   const [totalQuantity, setTotalQuantity] = useState('100');
   const [startDate, setStartDate] = useState('2026-10-22');
@@ -42,12 +41,8 @@ export default function CreateVoucherScreen() {
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [createdStatus, setCreatedStatus] = useState<VoucherStatus>('ACTIVE');
 
-  const assignedBrandName = currentUser.assignedBrandName || 'Starbucks';
-  const assignedBrandId = currentUser.assignedBrandId || 'brand_01';
+  const assignedBrandName = currentUser.assignedBrandName || 'Chưa có thương hiệu được gán';
 
   const handlePickCover = async () => {
     try {
@@ -98,44 +93,7 @@ export default function CreateVoucherScreen() {
 
   const handleSubmit = (targetStatus: VoucherStatus) => {
     if (!validate()) return;
-
-    setLoading(true);
-    setCreatedStatus(targetStatus);
-
-    setTimeout(() => {
-      setLoading(false);
-      const conditionsList = conditionsText
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      const discountDisplayStr =
-        discountType === 'PERCENTAGE'
-          ? `GIẢM ${discountValue}%`
-          : `GIẢM $${discountValue}`;
-
-      createVoucher({
-        brandId: assignedBrandId,
-        brandName: assignedBrandName,
-        brandLogo: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=200&auto=format&fit=crop&q=80',
-        title,
-        description,
-        category,
-        discountType,
-        discountValue: Number(discountValue),
-        discountDisplay: discountDisplayStr,
-        sellingPrice: Number(sellingPrice),
-        originalValue: Number(originalValue),
-        startDate,
-        expirationDate,
-        usageConditions: conditionsList.length > 0 ? conditionsList : ['Áp dụng quy định đổi voucher tiêu chuẩn của thương hiệu.'],
-        totalQuantity: Number(totalQuantity),
-        coverImage,
-        status: targetStatus,
-      });
-
-      setShowSuccessModal(true);
-    }, 700);
+    Alert.alert('Chưa hỗ trợ', `Backend hiện chưa có API tạo voucher ${targetStatus === 'DRAFT' ? 'nháp' : 'đang hoạt động'}. Chiến dịch chưa được lưu.`);
   };
 
   return (
@@ -318,30 +276,17 @@ export default function CreateVoucherScreen() {
           <PrimaryButton
             title="Phát Hành Chiến Dịch Ngay"
             onPress={() => handleSubmit('ACTIVE')}
-            loading={loading && createdStatus === 'ACTIVE'}
             style={styles.publishBtn}
           />
 
           <SecondaryButton
             title="Lưu Dưới Dạng Bản Nháp"
             onPress={() => handleSubmit('DRAFT')}
-            loading={loading && createdStatus === 'DRAFT'}
             style={styles.draftBtn}
           />
         </View>
       </View>
 
-      {/* Success Modal */}
-      <SuccessModal
-        visible={showSuccessModal}
-        title={createdStatus === 'ACTIVE' ? 'Chiến Dịch Đã Phát Hành! 🚀' : 'Đã Lưu Bản Nháp 📝'}
-        message={`"${title}" đã được thiết lập thành công với ${totalQuantity} lượt voucher.`}
-        buttonLabel="Xem Danh Sách Voucher"
-        onClose={() => {
-          setShowSuccessModal(false);
-          router.replace('/(manager)/vouchers');
-        }}
-      />
     </ScreenContainer>
   );
 }

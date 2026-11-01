@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  ScrollView,
+  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,14 +45,13 @@ export default function CheckoutScreen() {
 
   const selectedMethodObj = PAYMENT_METHODS.find((p) => p.id === selectedPayment) || PAYMENT_METHODS[0];
 
-  const handleConfirmPurchase = () => {
+  const handleConfirmPurchase = async () => {
     setShowConfirmModal(false);
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      const { order, walletVoucher } = await createOrder(voucher.id, selectedMethodObj.name);
       setLoading(false);
-      const { order, walletVoucher } = createOrder(voucher.id, selectedMethodObj.name);
-
       router.replace({
         pathname: '/(user)/order-result',
         params: {
@@ -61,7 +60,10 @@ export default function CheckoutScreen() {
           status: 'SUCCESS',
         },
       });
-    }, 1000);
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Không thể mua voucher', error instanceof Error ? error.message : 'Giao dịch chưa hoàn tất. Vui lòng thử lại.');
+    }
   };
 
   return (

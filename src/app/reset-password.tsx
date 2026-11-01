@@ -10,7 +10,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../components/common/ScreenContainer';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { PrimaryButton } from '../components/common/PrimaryButton';
-import { SuccessModal } from '../components/common/SuccessModal';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
 
 export default function ResetPasswordScreen() {
@@ -19,10 +18,9 @@ export default function ResetPasswordScreen() {
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [confirmError, setConfirmError] = useState('');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [requestError, setRequestError] = useState('');
 
   const validate = () => {
     let isValid = true;
@@ -50,17 +48,7 @@ export default function ResetPasswordScreen() {
 
   const handleReset = () => {
     if (!validate()) return;
-
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setShowSuccessModal(true);
-    }, 700);
-  };
-
-  const handleModalClose = () => {
-    setShowSuccessModal(false);
-    router.replace('/login');
+    setRequestError('Backend hiện chưa có API đặt lại mật khẩu. Mật khẩu chưa được thay đổi.');
   };
 
   return (
@@ -86,6 +74,7 @@ export default function ResetPasswordScreen() {
         </Text>
 
         <View style={styles.form}>
+          {requestError ? <Text style={styles.requestError}>{requestError}</Text> : null}
           <PasswordInput
             label="Mật khẩu mới"
             placeholder="Tối thiểu 6 ký tự"
@@ -109,9 +98,8 @@ export default function ResetPasswordScreen() {
           />
 
           <PrimaryButton
-            title="Cập nhật mật khẩu"
+            title="Kiểm tra hỗ trợ đặt lại"
             onPress={handleReset}
-            loading={loading}
             style={styles.updateButton}
           />
 
@@ -125,13 +113,6 @@ export default function ResetPasswordScreen() {
         </View>
       </View>
 
-      <SuccessModal
-        visible={showSuccessModal}
-        title="Cập nhật mật khẩu thành công! 🔒"
-        message="Mật khẩu của bạn đã được đặt lại thành công. Bạn có thể đăng nhập ngay với mật khẩu mới."
-        buttonLabel="Đăng nhập ngay"
-        onClose={handleModalClose}
-      />
     </ScreenContainer>
   );
 }
@@ -194,5 +175,11 @@ const styles = StyleSheet.create({
     ...Typography.body,
     fontWeight: '600',
     color: Colors.secondaryText,
+  },
+  requestError: {
+    ...Typography.bodySmall,
+    color: Colors.error,
+    marginBottom: Spacing.md,
+    textAlign: 'center',
   },
 });

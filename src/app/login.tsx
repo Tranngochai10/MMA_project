@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,8 +18,8 @@ import { useApp } from '../context/AppContext';
 export default function LoginScreen() {
   const { login } = useApp();
 
-  const [email, setEmail] = useState('alex.morgan@example.com');
-  const [password, setPassword] = useState('Voucher2026!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -53,35 +52,18 @@ export default function LoginScreen() {
     return isValid;
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!validate()) return;
 
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const role = await login(email.trim(), password, rememberMe);
+      router.replace(role === 'MANAGER' ? '/(manager)/dashboard' : '/(user)/home');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Đăng nhập không thành công.');
+    } finally {
       setLoading(false);
-      // Demo authentication validation
-      const isManagerEmail = email.toLowerCase().includes('manager');
-      login(email, isManagerEmail ? 'MANAGER' : 'USER');
-
-      if (isManagerEmail) {
-        router.replace('/(manager)/dashboard');
-      } else {
-        router.replace('/(user)/home');
-      }
-    }, 800);
-  };
-
-  const handleDemoPreset = (type: 'USER' | 'MANAGER') => {
-    if (type === 'USER') {
-      setEmail('alex.morgan@example.com');
-      setPassword('Voucher2026!');
-    } else {
-      setEmail('manager.sarah@brandhub.com');
-      setPassword('Manager2026!');
     }
-    setEmailError('');
-    setPasswordError('');
-    setAuthError('');
   };
 
   return (
@@ -101,45 +83,6 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>
             Đăng nhập để khám phá các voucher ưu đãi hấp dẫn
           </Text>
-        </View>
-
-        {/* Quick Demo Credentials Autofill */}
-        <View style={styles.presetContainer}>
-          <Text style={styles.presetLabel}>Chọn nhanh tài khoản mẫu:</Text>
-          <View style={styles.presetButtons}>
-            <TouchableOpacity
-              style={[
-                styles.presetBtn,
-                !email.includes('manager') && styles.presetBtnActive,
-              ]}
-              onPress={() => handleDemoPreset('USER')}
-            >
-              <Text
-                style={[
-                  styles.presetBtnText,
-                  !email.includes('manager') && styles.presetBtnTextActive,
-                ]}
-              >
-                Khách hàng (User)
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.presetBtn,
-                email.includes('manager') && styles.presetBtnActive,
-              ]}
-              onPress={() => handleDemoPreset('MANAGER')}
-            >
-              <Text
-                style={[
-                  styles.presetBtnText,
-                  email.includes('manager') && styles.presetBtnTextActive,
-                ]}
-              >
-                Quản lý (Manager)
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* Error Feedback */}
@@ -208,33 +151,6 @@ export default function LoginScreen() {
             style={styles.loginButton}
           />
 
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>HOẶC</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social Buttons (Demo presentation) */}
-          <View style={styles.socialRow}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleLogin}
-              style={styles.socialBtn}
-            >
-              <Ionicons name="logo-google" size={20} color="#DB4437" />
-              <Text style={styles.socialBtnText}>Google</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleLogin}
-              style={styles.socialBtn}
-            >
-              <Ionicons name="logo-apple" size={20} color="#000000" />
-              <Text style={styles.socialBtnText}>Apple</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Sign Up Link */}
           <View style={styles.signUpRow}>
             <Text style={styles.signUpText}>Chưa có tài khoản? </Text>
@@ -288,46 +204,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     maxWidth: 280,
   },
-  presetContainer: {
-    backgroundColor: Colors.lightPeach,
-    borderRadius: BorderRadius.card,
-    padding: Spacing.sm,
-    marginBottom: Spacing.base,
-    borderWidth: 1,
-    borderColor: '#FFDDC4',
-  },
-  presetLabel: {
-    ...Typography.caption,
-    fontWeight: '700',
-    color: Colors.primaryCoral,
-    marginBottom: Spacing.xs,
-    textAlign: 'center',
-  },
-  presetButtons: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  presetBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  presetBtnActive: {
-    backgroundColor: Colors.primaryCoral,
-    borderColor: Colors.primaryCoral,
-  },
-  presetBtnText: {
-    ...Typography.caption,
-    fontWeight: '700',
-    color: Colors.primaryText,
-  },
-  presetBtnTextActive: {
-    color: Colors.white,
-  },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -367,44 +243,6 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     marginBottom: Spacing.base,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: Spacing.base,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.border,
-  },
-  dividerText: {
-    ...Typography.caption,
-    color: Colors.tertiaryText,
-    fontWeight: '700',
-    marginHorizontal: Spacing.md,
-  },
-  socialRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  socialBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.card,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.soft,
-  },
-  socialBtnText: {
-    ...Typography.bodySmall,
-    fontWeight: '700',
-    color: Colors.primaryText,
-    marginLeft: Spacing.sm,
   },
   signUpRow: {
     flexDirection: 'row',

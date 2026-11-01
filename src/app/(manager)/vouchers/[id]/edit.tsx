@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  ScrollView,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '../../../../components/common/ScreenContainer';
@@ -12,16 +11,27 @@ import { AppHeader } from '../../../../components/common/AppHeader';
 import { FormInput } from '../../../../components/common/FormInput';
 import { PrimaryButton } from '../../../../components/common/PrimaryButton';
 import { SecondaryButton } from '../../../../components/common/SecondaryButton';
-import { SuccessModal } from '../../../../components/common/SuccessModal';
 import { EmptyState } from '../../../../components/common/EmptyState';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../../../constants/theme';
 import { useApp } from '../../../../context/AppContext';
 
 export default function EditVoucherScreen() {
   const { id } = useLocalSearchParams();
-  const { getVoucherById, updateVoucher } = useApp();
+  const { getVoucherById } = useApp();
 
   const voucher = getVoucherById(id as string);
+
+  const [title, setTitle] = useState(voucher?.title || '');
+  const [description, setDescription] = useState(voucher?.description || '');
+  const [sellingPrice, setSellingPrice] = useState(String(voucher?.sellingPrice || ''));
+  const [originalValue, setOriginalValue] = useState(String(voucher?.originalValue || ''));
+  const [totalQuantity, setTotalQuantity] = useState(String(voucher?.totalQuantity || ''));
+  const [expirationDate, setExpirationDate] = useState(voucher?.expirationDate || '');
+  const [conditionsText, setConditionsText] = useState(
+    voucher?.usageConditions.join('\n') || ''
+  );
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   if (!voucher) {
     return (
@@ -36,20 +46,6 @@ export default function EditVoucherScreen() {
       </ScreenContainer>
     );
   }
-
-  const [title, setTitle] = useState(voucher.title);
-  const [description, setDescription] = useState(voucher.description);
-  const [sellingPrice, setSellingPrice] = useState(String(voucher.sellingPrice));
-  const [originalValue, setOriginalValue] = useState(String(voucher.originalValue));
-  const [totalQuantity, setTotalQuantity] = useState(String(voucher.totalQuantity));
-  const [expirationDate, setExpirationDate] = useState(voucher.expirationDate);
-  const [conditionsText, setConditionsText] = useState(
-    voucher.usageConditions.join('\n')
-  );
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -72,27 +68,7 @@ export default function EditVoucherScreen() {
 
   const handleSave = () => {
     if (!validate()) return;
-
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      const conditionsList = conditionsText
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      updateVoucher(voucher.id, {
-        title,
-        description,
-        sellingPrice: Number(sellingPrice),
-        originalValue: Number(originalValue),
-        totalQuantity: Number(totalQuantity),
-        expirationDate,
-        usageConditions: conditionsList,
-      });
-
-      setShowSuccessModal(true);
-    }, 600);
+    Alert.alert('Chưa hỗ trợ', 'Backend hiện chưa có API cập nhật voucher. Thay đổi chưa được lưu.');
   };
 
   return (
@@ -178,7 +154,6 @@ export default function EditVoucherScreen() {
         <PrimaryButton
           title="Lưu Thay Đổi"
           onPress={handleSave}
-          loading={loading}
           style={styles.saveBtn}
         />
 
@@ -189,16 +164,6 @@ export default function EditVoucherScreen() {
         />
       </View>
 
-      <SuccessModal
-        visible={showSuccessModal}
-        title="Đã Lưu Thay Đổi! ✨"
-        message="Thông tin chiến dịch voucher đã được cập nhật thành công."
-        buttonLabel="Quay Lại Chi Tiết"
-        onClose={() => {
-          setShowSuccessModal(false);
-          router.back();
-        }}
-      />
     </ScreenContainer>
   );
 }

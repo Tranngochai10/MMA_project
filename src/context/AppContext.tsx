@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
+import { Alert } from 'react-native';
 import {
   Brand,
   ManagerRedemption,
@@ -11,27 +12,21 @@ import {
   VoucherStatus,
   WalletVoucher,
 } from '../types';
-import {
-  BRANDS,
-  INITIAL_MANAGER,
-  INITIAL_MANAGER_REDEMPTIONS,
-  INITIAL_MANAGER_STATS,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_ORDERS,
-  INITIAL_USER,
-  INITIAL_VOUCHERS,
-  INITIAL_WALLET_VOUCHERS,
-} from '../data/mockData';
-import { generateOrderId, generateVoucherCode } from '../utils/formatters';
+import { api, mapUser, setAuthToken, setUnauthorizedHandler } from '../services/api';
+import { readAuthToken, removeAuthToken, saveAuthToken } from '../services/tokenStorage';
+
+const EMPTY_USER: UserProfile = { id: '', name: '', email: '', phone: '', avatarUrl: '', role: 'USER' };
+const EMPTY_STATS: ManagerStats = { activeVouchers: 0, totalOrders: 0, issuedVouchers: 0, simulatedRedemptions: 0, totalRevenue: 0 };
 
 interface AppContextType {
   role: UserRole;
   setRole: (role: UserRole) => void;
   currentUser: UserProfile;
   isLoggedIn: boolean;
-  login: (email: string, targetRole?: UserRole) => boolean;
-  register: (name: string, email: string, phone?: string) => boolean;
-  logout: () => void;
+  authReady: boolean;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<UserRole>;
+  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  logout: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => void;
 
   brands: Brand[];
@@ -43,11 +38,11 @@ interface AppContextType {
 
   orders: Order[];
   getOrderById: (id: string) => Order | undefined;
-  createOrder: (voucherId: string, paymentMethod: string) => { order: Order; walletVoucher: WalletVoucher };
+  createOrder: (voucherId: string, paymentMethod: string) => Promise<{ order: Order; walletVoucher: WalletVoucher }>;
 
   walletVouchers: WalletVoucher[];
   getWalletVoucherById: (id: string) => WalletVoucher | undefined;
-  redeemWalletVoucher: (walletVoucherId: string) => { success: boolean; redeemedDate: string };
+  redeemWalletVoucher: (walletVoucherId: string) => Promise<{ success: boolean; redeemedDate: string }>;
 
   managerStats: ManagerStats;
   managerRedemptions: ManagerRedemption[];
@@ -65,76 +60,143 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [role, setRole] = useState<UserRole>('USER');
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
-  const [currentUser, setCurrentUser] = useState<UserProfile>(INITIAL_USER);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile>(EMPTY_USER);
+  const [authReady, setAuthReady] = useState(false);
 
-  const [brands, setBrands] = useState<Brand[]>(BRANDS);
-  const [vouchers, setVouchers] = useState<Voucher[]>(INITIAL_VOUCHERS);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
-  const [walletVouchers, setWalletVouchers] = useState<WalletVoucher[]>(INITIAL_WALLET_VOUCHERS);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
-  const [managerRedemptions, setManagerRedemptions] = useState<ManagerRedemption[]>(INITIAL_MANAGER_REDEMPTIONS);
-  const [managerStats, setManagerStats] = useState<ManagerStats>(INITIAL_MANAGER_STATS);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [walletVouchers, setWalletVouchers] = useState<WalletVoucher[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [managerRedemptions] = useState<ManagerRedemption[]>([]);
+  const [managerStats] = useState<ManagerStats>(EMPTY_STATS);
 
   const switchRole = (newRole: UserRole) => {
     setRole(newRole);
-    if (newRole === 'MANAGER') {
-      setCurrentUser(INITIAL_MANAGER);
-    } else {
-      setCurrentUser(INITIAL_USER);
-    }
+    if (currentUser.role !== newRole) setRole(currentUser.role);
   };
 
-  const login = (email: string, targetRole?: UserRole) => {
-    const selectedRole = targetRole || (email.toLowerCase().includes('manager') ? 'MANAGER' : 'USER');
-    setRole(selectedRole);
-    setIsLoggedIn(true);
-    if (selectedRole === 'MANAGER') {
-      setCurrentUser({
-        ...INITIAL_MANAGER,
-        email: email || INITIAL_MANAGER.email,
+  const loadAuthenticatedData = useCallback(async () => {
+    try {
+      const [apiBrands, apiVouchers, apiWallet, favoriteVouchers] = await Promise.all([
+        api.brands(), api.vouchers(), api.wallet(), api.favoriteVouchers(),
+      ]);
+      setBrands(apiBrands);
+      const vouchersById = new Map(apiVouchers.map((voucher) => [voucher.id, voucher]));
+      favoriteVouchers.forEach((voucher) => {
+        vouchersById.set(voucher.id, { ...vouchersById.get(voucher.id), ...voucher, isFavorite: true });
       });
-    } else {
-      setCurrentUser({
-        ...INITIAL_USER,
-        email: email || INITIAL_USER.email,
-      });
+      setVouchers(Array.from(vouchersById.values()));
+      setWalletVouchers(apiWallet);
+    } catch (error) {
+      Alert.alert('Không thể tải dữ liệu tài khoản', error instanceof Error ? error.message : 'Vui lòng thử lại khi kết nối máy chủ ổn định.');
     }
-    return true;
-  };
+  }, []);
 
-  const register = (name: string, email: string, phone?: string) => {
-    setIsLoggedIn(true);
-    setRole('USER');
-    setCurrentUser({
-      id: `usr_${Date.now()}`,
-      name,
-      email,
-      phone: phone || '',
-      avatarUrl: INITIAL_USER.avatarUrl,
-      role: 'USER',
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void removeAuthToken();
+      setIsLoggedIn(false);
+      setRole('USER');
+      setCurrentUser(EMPTY_USER);
+      setOrders([]);
+      setWalletVouchers([]);
     });
-    return true;
+    return () => setUnauthorizedHandler(undefined);
+  }, []);
+
+  useEffect(() => {
+    Promise.all([api.brands(), api.vouchers()])
+      .then(([apiBrands, apiVouchers]) => {
+        setBrands(apiBrands);
+        setVouchers(apiVouchers);
+      })
+      .catch((error) => {
+        setBrands([]);
+        setVouchers([]);
+        Alert.alert('Không thể tải ưu đãi', error instanceof Error ? error.message : 'Vui lòng kiểm tra kết nối máy chủ.');
+      });
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const token = await readAuthToken();
+        if (!token) return;
+        setAuthToken(token);
+        const profile = mapUser((await api.me()).user);
+        if (!active) return;
+        setCurrentUser(profile);
+        setRole(profile.role);
+        setIsLoggedIn(true);
+        try { await loadAuthenticatedData(); } catch { /* Auth remains valid; data can be retried by the screens. */ }
+      } catch (error) {
+        setAuthToken(null);
+        if ((error as { status?: number })?.status === 401) await removeAuthToken();
+        else Alert.alert('Không thể khôi phục phiên', error instanceof Error ? error.message : 'Vui lòng đăng nhập lại khi có kết nối.');
+      } finally {
+        if (active) setAuthReady(true);
+      }
+    })();
+    return () => { active = false; };
+  }, [loadAuthenticatedData]);
+
+  const login = async (email: string, password: string, rememberMe = true): Promise<UserRole> => {
+    const auth = await api.login(email, password);
+    if (rememberMe) await saveAuthToken(auth.token);
+    else await removeAuthToken();
+    setAuthToken(auth.token);
+    let profile: UserProfile;
+    try { profile = mapUser((await api.me()).user); }
+    catch (error) { setAuthToken(null); await removeAuthToken(); throw error; }
+    setRole(profile.role);
+    setCurrentUser(profile);
+    setIsLoggedIn(true);
+    await loadAuthenticatedData();
+    return profile.role;
   };
 
-  const logout = () => {
+  const register = async (name: string, email: string, password: string, phone?: string) => {
+    const auth = await api.register(name, email, password, phone);
+    await saveAuthToken(auth.token);
+    setAuthToken(auth.token);
+    let profile: UserProfile;
+    try { profile = mapUser((await api.me()).user); }
+    catch (error) { setAuthToken(null); await removeAuthToken(); throw error; }
+    setRole(profile.role);
+    setCurrentUser(profile);
+    setIsLoggedIn(true);
+    await loadAuthenticatedData();
+  };
+
+  const logout = async () => {
+    try {
+      await api.logout();
+    } catch {
+      // Clear the local session even if the server is no longer reachable.
+    }
+    setAuthToken(null);
+    try { await removeAuthToken(); } catch { /* The in-memory session is still cleared. */ }
     setIsLoggedIn(false);
+    setRole('USER');
+    setCurrentUser(EMPTY_USER);
+    setOrders([]);
+    setWalletVouchers([]);
+    setNotifications([]);
   };
 
-  const updateProfile = (data: Partial<UserProfile>) => {
-    setCurrentUser((prev) => ({ ...prev, ...data }));
+  const updateProfile = (_data: Partial<UserProfile>) => { throw new Error('Backend chưa hỗ trợ cập nhật hồ sơ.'); };
+
+  const toggleFavoriteBrand = async (brandId: string) => {
+    const result = await api.toggleBrandFavorite(brandId);
+    setBrands((prev) => prev.map((b) => b.id === brandId ? { ...b, isFavorite: result.isFavorite } : b));
   };
 
-  const toggleFavoriteBrand = (brandId: string) => {
-    setBrands((prev) =>
-      prev.map((b) => (b.id === brandId ? { ...b, isFavorite: !b.isFavorite } : b))
-    );
-  };
-
-  const toggleFavoriteVoucher = (voucherId: string) => {
-    setVouchers((prev) =>
-      prev.map((v) => (v.id === voucherId ? { ...v, isFavorite: !v.isFavorite } : v))
-    );
+  const toggleFavoriteVoucher = async (voucherId: string) => {
+    const result = await api.toggleVoucherFavorite(voucherId);
+    setVouchers((prev) => prev.map((v) => v.id === voucherId ? { ...v, isFavorite: result.isFavorite } : v));
   };
 
   const getBrandById = (id: string) => brands.find((b) => b.id === id);
@@ -142,37 +204,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getOrderById = (id: string) => orders.find((o) => o.id === id);
   const getWalletVoucherById = (id: string) => walletVouchers.find((w) => w.id === id);
 
-  const createOrder = (voucherId: string, paymentMethod: string) => {
-    const voucher = vouchers.find((v) => v.id === voucherId) || vouchers[0];
-    const orderId = generateOrderId();
-    const walletVoucherId = `wlt_${Date.now()}`;
-    const code = generateVoucherCode(voucher.brandName.substring(0, 4));
+  const createOrder = async (voucherId: string, paymentMethod: string) => {
+    const purchase = await api.buyVoucher(voucherId, paymentMethod);
+    const voucher = vouchers.find((v) => v.id === voucherId);
+    if (!voucher) throw new Error('Không tìm thấy voucher đã tải.');
+    const walletVoucherId = String(purchase.userVoucherId);
 
     const newWalletVoucher: WalletVoucher = {
       id: walletVoucherId,
       voucherId: voucher.id,
-      brandName: voucher.brandName,
-      brandLogo: voucher.brandLogo,
-      title: voucher.title,
+      brandName: purchase.brandName || voucher.brandName,
+      brandLogo: purchase.brandLogo || voucher.brandLogo,
+      title: purchase.voucherTitle || voucher.title,
       discountDisplay: voucher.discountDisplay,
-      voucherCode: code,
-      purchasedDate: new Date().toISOString().split('T')[0],
-      expirationDate: voucher.expirationDate,
+      voucherCode: purchase.voucherCode,
+      purchasedDate: purchase.purchasedDate || new Date().toISOString(),
+      expirationDate: purchase.expirationDate || voucher.expirationDate,
       status: 'AVAILABLE',
       usageConditions: voucher.usageConditions,
-      sellingPrice: voucher.sellingPrice,
+      sellingPrice: purchase.totalAmount ?? voucher.sellingPrice,
       originalValue: voucher.originalValue,
       coverImage: voucher.coverImage,
     };
 
     const newOrder: Order = {
-      id: orderId,
+      id: purchase.orderCode,
       voucherId: voucher.id,
-      voucherTitle: voucher.title,
-      brandName: voucher.brandName,
-      brandLogo: voucher.brandLogo,
-      amount: voucher.sellingPrice,
-      paymentMethod,
+      voucherTitle: purchase.voucherTitle || voucher.title,
+      brandName: purchase.brandName || voucher.brandName,
+      brandLogo: purchase.brandLogo || voucher.brandLogo,
+      amount: purchase.totalAmount ?? voucher.sellingPrice,
+      paymentMethod: purchase.paymentMethod || paymentMethod,
       status: 'PAID',
       createdAt: new Date().toISOString(),
       walletVoucherId,
@@ -190,30 +252,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       )
     );
 
-    // Update manager stats
-    setManagerStats((prev) => ({
-      ...prev,
-      totalOrders: prev.totalOrders + 1,
-      issuedVouchers: prev.issuedVouchers + 1,
-      totalRevenue: prev.totalRevenue + voucher.sellingPrice,
-    }));
-
-    // Trigger purchase notification
-    const newNotif: NotificationItem = {
-      id: `notif_${Date.now()}`,
-      type: 'PURCHASE_SUCCESS',
-      title: 'Order Confirmed! 🎉',
-      message: `Your ${voucher.brandName} voucher has been successfully issued to your wallet.`,
-      createdAt: 'Just now',
-      isRead: false,
-      actionUrl: '/(user)/wallet',
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
     return { order: newOrder, walletVoucher: newWalletVoucher };
   };
 
-  const redeemWalletVoucher = (walletVoucherId: string) => {
+  const redeemWalletVoucher = async (walletVoucherId: string) => {
+    const result = await api.useVoucher(walletVoucherId);
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
       now.getDate()
@@ -227,7 +270,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           redeemedItem = {
             ...item,
             status: 'REDEEMED',
-            redeemedDate: formattedDate,
+            redeemedDate: result.usedAt || formattedDate,
           };
           return redeemedItem;
         }
@@ -235,67 +278,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
-    if (redeemedItem) {
-      // Record simulated redemption for manager dashboard
-      const newRedemption: ManagerRedemption = {
-        id: `red_${Date.now()}`,
-        voucherId: redeemedItem.voucherId,
-        voucherTitle: redeemedItem.title,
-        voucherCode: redeemedItem.voucherCode,
-        customerName: currentUser.name || 'Demo Customer',
-        redeemedDate: formattedDate,
-        status: 'CONFIRMED',
-      };
-      setManagerRedemptions((prev) => [newRedemption, ...prev]);
+    if (redeemedItem) setWalletVouchers((prev) => prev.map((item) => item.id === walletVoucherId ? redeemedItem! : item));
 
-      // Update manager stats
-      setManagerStats((prev) => ({
-        ...prev,
-        simulatedRedemptions: prev.simulatedRedemptions + 1,
-      }));
-
-      // Add notification
-      const newNotif: NotificationItem = {
-        id: `notif_${Date.now()}`,
-        type: 'REDEMPTION_CONFIRMED',
-        title: 'Voucher Redeemed',
-        message: `Voucher ${redeemedItem.voucherCode} was successfully marked as used.`,
-        createdAt: 'Just now',
-        isRead: false,
-        actionUrl: '/(user)/wallet',
-      };
-      setNotifications((prev) => [newNotif, ...prev]);
-    }
-
-    return { success: true, redeemedDate: formattedDate };
+    return { success: true, redeemedDate: result.usedAt || formattedDate };
   };
 
-  const createVoucher = (voucherData: Omit<Voucher, 'id' | 'availableQuantity'>) => {
-    const newId = `vchr_${Date.now()}`;
-    const newVoucher: Voucher = {
-      ...voucherData,
-      id: newId,
-      availableQuantity: voucherData.totalQuantity,
-    };
-    setVouchers((prev) => [newVoucher, ...prev]);
-    setManagerStats((prev) => ({
-      ...prev,
-      activeVouchers: prev.activeVouchers + (voucherData.status === 'ACTIVE' ? 1 : 0),
-    }));
-    return newVoucher;
-  };
+  const createVoucher = (_voucherData: Omit<Voucher, 'id' | 'availableQuantity'>): Voucher => { throw new Error('Backend chưa có endpoint tạo voucher.'); };
 
-  const updateVoucher = (voucherId: string, updates: Partial<Voucher>) => {
-    setVouchers((prev) =>
-      prev.map((v) => (v.id === voucherId ? { ...v, ...updates } : v))
-    );
-  };
+  const updateVoucher = (_voucherId: string, _updates: Partial<Voucher>) => { throw new Error('Backend chưa có endpoint cập nhật voucher.'); };
 
-  const updateVoucherStatus = (voucherId: string, status: VoucherStatus) => {
-    setVouchers((prev) =>
-      prev.map((v) => (v.id === voucherId ? { ...v, status } : v))
-    );
-  };
+  const updateVoucherStatus = (_voucherId: string, _status: VoucherStatus) => { throw new Error('Backend chưa có endpoint cập nhật trạng thái voucher.'); };
 
   const markNotificationAsRead = (id: string) => {
     setNotifications((prev) =>
@@ -319,6 +311,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setRole: switchRole,
         currentUser,
         isLoggedIn,
+        authReady,
         login,
         register,
         logout,
