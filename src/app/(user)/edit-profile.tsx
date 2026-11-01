@@ -19,15 +19,13 @@ import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../consta
 import { useApp } from '../../context/AppContext';
 
 export default function EditProfileScreen() {
-  const { currentUser } = useApp();
+  const { currentUser, updateProfile } = useApp();
 
   const [name, setName] = useState(currentUser.name);
-  const [email, setEmail] = useState(currentUser.email);
   const [phone, setPhone] = useState(currentUser.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl);
 
   const [nameError, setNameError] = useState('');
-  const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -69,27 +67,24 @@ export default function EditProfileScreen() {
   const validate = () => {
     let isValid = true;
     setNameError('');
-    setEmailError('');
 
     if (!name.trim()) {
       setNameError('Vui lòng nhập họ và tên');
       isValid = false;
     }
 
-    if (!email.trim()) {
-      setEmailError('Vui lòng nhập địa chỉ email');
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setEmailError('Định dạng email không hợp lệ');
-      isValid = false;
-    }
-
     return isValid;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    Alert.alert('Chưa hỗ trợ', 'Backend hiện chưa có API cập nhật hồ sơ. Thông tin chưa được lưu.');
+    setLoading(true);
+    try {
+      await updateProfile({ name: name.trim(), phone: phone.trim(), avatarUrl });
+      setShowSuccessModal(true);
+    } catch (error) {
+      Alert.alert('Không thể cập nhật hồ sơ', error instanceof Error ? error.message : 'Vui lòng thử lại.');
+    } finally { setLoading(false); }
   };
 
   return (
@@ -129,15 +124,11 @@ export default function EditProfileScreen() {
           <FormInput
             label="Địa chỉ Email"
             placeholder="nguyenvana@example.com"
-            value={email}
-            onChangeText={(txt: string) => {
-              setEmail(txt);
-              if (emailError) setEmailError('');
-            }}
+            value={currentUser.email}
+            editable={false}
             keyboardType="email-address"
             autoCapitalize="none"
             leftIcon="mail-outline"
-            error={emailError}
           />
 
           <FormInput

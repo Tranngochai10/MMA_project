@@ -4,17 +4,21 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../components/common/ScreenContainer';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { PrimaryButton } from '../components/common/PrimaryButton';
+import { FormInput } from '../components/common/FormInput';
+import { api } from '../services/api';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams();
-  const email = (params.email as string) || 'your account';
+  const email = (params.email as string) || '';
+  const [otp, setOtp] = useState((params.otp as string) || '');
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -46,9 +50,13 @@ export default function ResetPasswordScreen() {
     return isValid;
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!validate()) return;
-    setRequestError('Backend hiện chưa có API đặt lại mật khẩu. Mật khẩu chưa được thay đổi.');
+    if (!otp.trim()) { setRequestError('Vui lòng nhập mã OTP.'); return; }
+    try {
+      await api.resetPassword(email, otp.trim(), password);
+      Alert.alert('Đổi mật khẩu thành công', 'Bạn có thể đăng nhập bằng mật khẩu mới.', [{ text: 'Đăng nhập', onPress: () => router.replace('/login') }]);
+    } catch (e) { setRequestError(e instanceof Error ? e.message : 'Không thể đặt lại mật khẩu. Vui lòng thử lại.'); }
   };
 
   return (
@@ -75,6 +83,7 @@ export default function ResetPasswordScreen() {
 
         <View style={styles.form}>
           {requestError ? <Text style={styles.requestError}>{requestError}</Text> : null}
+          <FormInput label="Mã OTP" placeholder="Nhập mã OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" />
           <PasswordInput
             label="Mật khẩu mới"
             placeholder="Tối thiểu 6 ký tự"
@@ -98,7 +107,7 @@ export default function ResetPasswordScreen() {
           />
 
           <PrimaryButton
-            title="Kiểm tra hỗ trợ đặt lại"
+            title="Đặt lại mật khẩu"
             onPress={handleReset}
             style={styles.updateButton}
           />

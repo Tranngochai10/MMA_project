@@ -22,7 +22,7 @@ import { Voucher, VoucherStatus } from '../../../types';
 type StatusFilter = 'ALL' | VoucherStatus;
 
 export default function ManagerVouchersScreen() {
-  const { vouchers, updateVoucherStatus } = useApp();
+  const { managerVoucherList: vouchers, updateVoucherStatus } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
@@ -58,10 +58,13 @@ export default function ManagerVouchersScreen() {
     setSelectedVoucherForAction({ voucher, targetStatus });
   };
 
-  const handleConfirmStatusChange = () => {
-    if (selectedVoucherForAction) {
-      Alert.alert('Chưa hỗ trợ', 'Backend hiện chưa có API cập nhật trạng thái voucher.');
+  const handleConfirmStatusChange = async () => {
+    if (!selectedVoucherForAction) return;
+    try {
+      await updateVoucherStatus(selectedVoucherForAction.voucher.id, selectedVoucherForAction.targetStatus);
       setSelectedVoucherForAction(null);
+    } catch (error) {
+      Alert.alert('Không thể cập nhật', error instanceof Error ? error.message : 'Vui lòng thử lại.');
     }
   };
 
@@ -76,6 +79,9 @@ export default function ManagerVouchersScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => router.push('/(manager)/vouchers/create')}
+            accessibilityRole="button"
+            accessibilityLabel="Tạo voucher mới"
+            hitSlop={8}
             style={styles.createBtn}
           >
             <Ionicons name="add" size={18} color={Colors.white} />

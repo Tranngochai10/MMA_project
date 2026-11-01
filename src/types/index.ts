@@ -41,6 +41,7 @@ export type DiscountType = 'PERCENTAGE' | 'FIXED';
 export interface Voucher {
   id: string;
   brandId: string;
+  categoryId?: string;
   brandName: string;
   brandLogo: string;
   title: string;

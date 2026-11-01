@@ -115,7 +115,7 @@ export default function ManagerProfileScreen() {
             <View style={styles.brandRow}>
               <Ionicons name="storefront" size={12} color={Colors.primaryCoral} />
               <Text style={styles.brandName}>
-                {currentUser.assignedBrandName || 'Starbucks Coffee'}
+                {currentUser.assignedBrandName || 'Thương hiệu đối tác'}
               </Text>
             </View>
           </View>

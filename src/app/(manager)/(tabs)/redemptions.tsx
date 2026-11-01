@@ -3,6 +3,8 @@ import {
   View,
   Text,
   StyleSheet,
+  TextInput,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../../components/common/ScreenContainer';
@@ -13,8 +15,45 @@ import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../../con
 import { useApp } from '../../../context/AppContext';
 
 export default function ManagerRedemptionsScreen() {
-  const { managerRedemptions } = useApp();
+  const { managerRedemptions, verifyVoucherCode, redeemVoucherCode, notify } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
+  const [voucherCode, setVoucherCode] = useState('');
+  const [verified, setVerified] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [resultMessage, setResultMessage] = useState('');
+  const [resultError, setResultError] = useState(false);
+
+  const verify = async () => {
+    if (!voucherCode.trim()) { setResultError(true); setResultMessage('Nhập mã voucher cần kiểm tra trước.'); return; }
+    setBusy(true);
+    setResultMessage('');
+    try {
+      const result = await verifyVoucherCode(voucherCode.trim());
+      setVerified(result.validityStatus === 'VALID' && !result.isUsed);
+      const voucher = result.voucher as Record<string, unknown> | undefined;
+      const customer = result.customer as Record<string, unknown> | undefined;
+      const message = `${String(result.validityMessage || result.validityStatus || 'Đã kiểm tra mã')}${voucher?.title ? ` · ${String(voucher.title)}` : ''}${customer?.name ? ` · Khách hàng: ${String(customer.name)}` : ''}`;
+      setResultError(!(result.validityStatus === 'VALID' && !result.isUsed));
+      setResultMessage(message);
+      notify(message, result.validityStatus === 'VALID' && !result.isUsed ? 'success' : 'error');
+    } catch (error) {
+      setVerified(false);
+      const message = error instanceof Error ? error.message : 'Không thể xác minh mã. Vui lòng thử lại.';
+      setResultError(true); setResultMessage(message); notify(message, 'error');
+    } finally { setBusy(false); }
+  };
+
+  const redeem = async () => {
+    setBusy(true);
+    try {
+      const result = await redeemVoucherCode(voucherCode.trim());
+      setVerified(false);
+      setVoucherCode('');
+      const message = `Đã xác nhận đổi voucher ${String(result.voucherCode || '')}.`;
+      setResultError(false); setResultMessage(message); notify(message);
+    } catch (error) { const message = error instanceof Error ? error.message : 'Không thể đổi voucher. Vui lòng thử lại.'; setResultError(true); setResultMessage(message); notify(message, 'error'); }
+    finally { setBusy(false); }
+  };
 
   const filteredRedemptions = useMemo(() => {
     if (!searchQuery.trim()) return managerRedemptions;
@@ -52,6 +91,16 @@ export default function ManagerRedemptionsScreen() {
         placeholder="Tìm mã voucher, tên khách hàng hoặc ưu đãi..."
         showFilterButton={false}
       />
+
+      <View style={styles.verifyBox}>
+        <Text style={styles.verifyTitle}>Xác thực mã tại quầy</Text>
+        <TextInput value={voucherCode} onChangeText={(value) => { setVoucherCode(value.toUpperCase()); setVerified(false); }} placeholder="Nhập mã voucher" autoCapitalize="characters" style={styles.codeInput} />
+        <View style={styles.verifyActions}>
+          <TouchableOpacity disabled={busy} onPress={verify} style={styles.verifyButton}><Text style={styles.verifyButtonText}>{busy ? 'Đang kiểm tra…' : 'Kiểm tra mã'}</Text></TouchableOpacity>
+          {verified ? <TouchableOpacity disabled={busy} onPress={redeem} style={[styles.verifyButton, styles.redeemButton]}><Text style={styles.verifyButtonText}>Xác nhận đổi</Text></TouchableOpacity> : null}
+        </View>
+        {resultMessage ? <Text accessibilityRole="alert" style={[styles.resultMessage, resultError ? styles.resultError : styles.resultSuccess]}>{resultMessage}</Text> : null}
+      </View>
 
       <View style={styles.listContainer}>
         {filteredRedemptions.length > 0 ? (
@@ -98,6 +147,16 @@ export default function ManagerRedemptionsScreen() {
 }
 
 const styles = StyleSheet.create({
+  verifyBox: { marginHorizontal: Spacing.base, marginBottom: Spacing.md, padding: Spacing.md, borderRadius: BorderRadius.card, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border },
+  verifyTitle: { ...Typography.body, fontWeight: '700', color: Colors.primaryText, marginBottom: Spacing.sm },
+  codeInput: { height: 46, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.md, color: Colors.primaryText },
+  verifyActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
+  verifyButton: { flex: 1, minHeight: 42, borderRadius: BorderRadius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primaryCoral },
+  redeemButton: { backgroundColor: Colors.success },
+  verifyButtonText: { color: Colors.white, fontWeight: '700' },
+  resultMessage: { marginTop: Spacing.sm, padding: Spacing.sm, borderRadius: BorderRadius.sm, overflow: 'hidden' },
+  resultError: { color: Colors.error, backgroundColor: Colors.errorLight },
+  resultSuccess: { color: Colors.success, backgroundColor: '#E8F5EE' },
   disclaimerCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',

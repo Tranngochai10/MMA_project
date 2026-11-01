@@ -17,7 +17,7 @@ import { useApp } from '../../../../context/AppContext';
 
 export default function EditVoucherScreen() {
   const { id } = useLocalSearchParams();
-  const { getVoucherById } = useApp();
+  const { getVoucherById, updateVoucher } = useApp();
 
   const voucher = getVoucherById(id as string);
 
@@ -66,9 +66,14 @@ export default function EditVoucherScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    Alert.alert('Chưa hỗ trợ', 'Backend hiện chưa có API cập nhật voucher. Thay đổi chưa được lưu.');
+    try {
+      await updateVoucher(id as string, { title: title.trim(), description: description.trim(), sellingPrice: Number(sellingPrice), originalValue: Number(originalValue), totalQuantity: Number(totalQuantity), expirationDate, usageConditions: conditionsText.split('\n').map((line) => line.trim()).filter(Boolean) });
+      Alert.alert('Đã cập nhật', 'Thông tin voucher đã được lưu.', [{ text: 'OK', onPress: () => router.back() }]);
+    } catch (error) {
+      Alert.alert('Không thể cập nhật', error instanceof Error ? error.message : 'Vui lòng thử lại.');
+    }
   };
 
   return (

@@ -5,7 +5,6 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +22,7 @@ import { formatDate } from '../../../utils/formatters';
 export default function VoucherDetailScreen() {
   const { id } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const { getVoucherById, toggleFavoriteVoucher } = useApp();
+  const { getVoucherById, toggleFavoriteVoucher, isLoggedIn } = useApp();
 
   const [shareSuccess, setShareSuccess] = useState(false);
 
@@ -52,6 +51,10 @@ export default function VoucherDetailScreen() {
 
   const handleBuy = () => {
     if (!isBuyable) return;
+    if (!isLoggedIn) {
+      router.push({ pathname: '/login', params: { returnToVoucherId: voucher.id } });
+      return;
+    }
     router.push({
       pathname: '/(user)/checkout',
       params: { voucherId: voucher.id },
@@ -88,7 +91,9 @@ export default function VoucherDetailScreen() {
 
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => toggleFavoriteVoucher(voucher.id)}
+                onPress={() => isLoggedIn
+                  ? void toggleFavoriteVoucher(voucher.id)
+                  : router.push({ pathname: '/login', params: { returnToFavoriteVoucherId: voucher.id } })}
                 style={[styles.floatingIconBtn, { marginLeft: Spacing.sm }]}
               >
                 <Ionicons

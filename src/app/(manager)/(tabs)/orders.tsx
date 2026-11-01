@@ -6,8 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../../components/common/ScreenContainer';
 import { AppHeader } from '../../../components/common/AppHeader';
 import { SearchBar } from '../../../components/common/SearchBar';
@@ -15,11 +13,11 @@ import { EmptyState } from '../../../components/common/EmptyState';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../../constants/theme';
 import { useApp } from '../../../context/AppContext';
-import { Order, OrderStatus } from '../../../types';
+import { Order } from '../../../types';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 
 export default function ManagerOrdersScreen() {
-  const { orders } = useApp();
+  const { managerRecentOrders: orders } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');

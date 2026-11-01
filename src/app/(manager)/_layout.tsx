@@ -14,6 +14,7 @@ export default function ManagerLayout() {
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="vouchers/create" />
+      <Stack.Screen name="brands/create" />
       <Stack.Screen name="vouchers/[id]" />
       <Stack.Screen name="vouchers/[id]/edit" />
     </Stack>

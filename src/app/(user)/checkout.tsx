@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Image,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,13 +20,29 @@ import { formatCurrency } from '../../utils/formatters';
 
 export default function CheckoutScreen() {
   const { voucherId } = useLocalSearchParams();
-  const { getVoucherById, createOrder } = useApp();
+  const { getVoucherById, createOrder, isLoggedIn } = useApp();
 
   const voucher = getVoucherById(voucherId as string);
 
   const [selectedPayment, setSelectedPayment] = useState(PAYMENT_METHODS[0].id);
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const purchaseLock = useRef(false);
+  const [purchaseError, setPurchaseError] = useState('');
+
+  if (!isLoggedIn) {
+    return (
+      <ScreenContainer>
+        <EmptyState
+          icon="lock-closed-outline"
+          title="Đăng nhập để thanh toán"
+          message="Bạn cần đăng nhập trước khi mua và lưu voucher vào ví."
+          actionLabel="Đăng nhập"
+          onAction={() => router.replace({ pathname: '/login', params: { returnToVoucherId: voucherId as string } })}
+        />
+      </ScreenContainer>
+    );
+  }
 
   if (!voucher) {
     return (
@@ -46,6 +61,9 @@ export default function CheckoutScreen() {
   const selectedMethodObj = PAYMENT_METHODS.find((p) => p.id === selectedPayment) || PAYMENT_METHODS[0];
 
   const handleConfirmPurchase = async () => {
+    if (purchaseLock.current) return;
+    purchaseLock.current = true;
+    setPurchaseError('');
     setShowConfirmModal(false);
     setLoading(true);
 
@@ -61,8 +79,9 @@ export default function CheckoutScreen() {
         },
       });
     } catch (error) {
+      purchaseLock.current = false;
       setLoading(false);
-      Alert.alert('Không thể mua voucher', error instanceof Error ? error.message : 'Giao dịch chưa hoàn tất. Vui lòng thử lại.');
+      setPurchaseError(error instanceof Error ? error.message : 'Giao dịch chưa hoàn tất. Vui lòng thử lại.');
     }
   };
 
@@ -164,6 +183,7 @@ export default function CheckoutScreen() {
         </View>
 
         {/* Purchase CTA */}
+        {purchaseError ? <Text accessibilityRole="alert" style={styles.purchaseError}>{purchaseError}</Text> : null}
         <PrimaryButton
           title={`Thanh Toán Ngay • ${formatCurrency(voucher.sellingPrice)}`}
           onPress={() => setShowConfirmModal(true)}
@@ -402,6 +422,12 @@ const styles = StyleSheet.create({
   },
   purchaseBtn: {
     marginBottom: Spacing.sm,
+  },
+  purchaseError: {
+    color: Colors.error,
+    fontWeight: '600',
+    marginTop: Spacing.md,
+    textAlign: 'center',
   },
   cancelBtn: {
     alignItems: 'center',
