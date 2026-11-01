@@ -37,6 +37,8 @@ export default function DiscoverScreen() {
   });
 
   useEffect(() => {
+    // Route parameters may change while the discover tab stays mounted.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (params.q) setSearchQuery(params.q as string);
     if (params.category) setSelectedCategory(params.category as VoucherCategory);
   }, [params]);

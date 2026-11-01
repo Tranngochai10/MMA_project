@@ -1,5 +1,15 @@
 # VoucherHub — Brand Voucher Marketplace Mobile UI
 
+## API configuration
+
+Set `EXPO_PUBLIC_API_URL` to the backend **origin** (for example, `http://localhost:5000`), without the `/api` suffix. Expo loads `.env` for local development and `.env.production` for production builds; use an HTTPS backend origin in production. This variable is public app configuration and must not contain secrets.
+
+- iOS Simulator and web can usually reach a backend on the development machine at `http://localhost:5000`.
+- Android Emulator uses `http://10.0.2.2:5000` to reach the host machine.
+- A physical device needs the development machine's reachable LAN IP, such as `http://192.168.1.10:5000`, with both devices on the same network and the backend listening on that interface.
+
+After changing an Expo environment file, restart Metro so the public variable is bundled again.
+
 A complete, high-fidelity mobile application for discovering, purchasing, and redeeming **Brand Vouchers, Discount Deals, and Promotions** built with **React Native**, **Expo (SDK 58)**, **TypeScript**, and **Expo Router**.
 
 Designed following premium mobile UI/UX principles: warm cream background (`#FFF8F1`), soft peach promotional banners (`#FFF0DF`), coral-orange gradient accents (`#FF765F` → `#FF9D43`), white rounded cards (16–22px radius), circular brand logos, and floating bottom tab navigation.

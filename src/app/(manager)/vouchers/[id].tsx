@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   Image,
@@ -46,7 +47,7 @@ export default function ManagerVoucherDetailScreen() {
 
   const handleConfirmStatus = () => {
     if (confirmStatus) {
-      updateVoucherStatus(voucher.id, confirmStatus);
+      Alert.alert('Chưa hỗ trợ', 'Backend hiện chưa có API cập nhật trạng thái voucher.');
       setConfirmStatus(null);
     }
   };

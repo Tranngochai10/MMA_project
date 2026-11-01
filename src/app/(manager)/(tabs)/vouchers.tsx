@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
+  Alert,
   View,
   Text,
   ScrollView,
@@ -59,10 +60,7 @@ export default function ManagerVouchersScreen() {
 
   const handleConfirmStatusChange = () => {
     if (selectedVoucherForAction) {
-      updateVoucherStatus(
-        selectedVoucherForAction.voucher.id,
-        selectedVoucherForAction.targetStatus
-      );
+      Alert.alert('Chưa hỗ trợ', 'Backend hiện chưa có API cập nhật trạng thái voucher.');
       setSelectedVoucherForAction(null);
     }
   };

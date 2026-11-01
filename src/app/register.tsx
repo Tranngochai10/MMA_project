@@ -79,15 +79,18 @@ export default function RegisterScreen() {
     return isValid;
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!validate()) return;
 
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await register(fullName.trim(), email.trim(), password, phone.trim() || undefined);
       setLoading(false);
-      register(fullName, email, phone);
       setShowSuccessModal(true);
-    }, 800);
+    } catch (error) {
+      setLoading(false);
+      setEmailError(error instanceof Error ? error.message : 'Đăng ký không thành công.');
+    }
   };
 
   const handleModalClose = () => {

@@ -4,7 +4,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
+  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,19 +49,22 @@ export default function WalletVoucherDetailScreen() {
 
   const isAvailable = voucher.status === 'AVAILABLE';
   const isRedeemed = voucher.status === 'REDEEMED';
-  const isExpired = voucher.status === 'EXPIRED';
 
   const handleCopyCode = () => {
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  const handleConfirmUse = () => {
+  const handleConfirmUse = async () => {
     setShowConfirmModal(false);
-    const result = redeemWalletVoucher(voucher.id);
-    if (result.success) {
-      setRedeemedTimestamp(result.redeemedDate);
-      setShowSuccessModal(true);
+    try {
+      const result = await redeemWalletVoucher(voucher.id);
+      if (result.success) {
+        setRedeemedTimestamp(result.redeemedDate);
+        setShowSuccessModal(true);
+      }
+    } catch (error) {
+      Alert.alert('Không thể sử dụng voucher', error instanceof Error ? error.message : 'Voucher vẫn chưa được sử dụng. Vui lòng thử lại.');
     }
   };
 

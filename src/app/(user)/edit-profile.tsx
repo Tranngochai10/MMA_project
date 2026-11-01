@@ -19,7 +19,7 @@ import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../consta
 import { useApp } from '../../context/AppContext';
 
 export default function EditProfileScreen() {
-  const { currentUser, updateProfile } = useApp();
+  const { currentUser } = useApp();
 
   const [name, setName] = useState(currentUser.name);
   const [email, setEmail] = useState(currentUser.email);
@@ -89,18 +89,7 @@ export default function EditProfileScreen() {
 
   const handleSave = () => {
     if (!validate()) return;
-
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      updateProfile({
-        name,
-        email,
-        phone,
-        avatarUrl,
-      });
-      setShowSuccessModal(true);
-    }, 600);
+    Alert.alert('Chưa hỗ trợ', 'Backend hiện chưa có API cập nhật hồ sơ. Thông tin chưa được lưu.');
   };
 
   return (
