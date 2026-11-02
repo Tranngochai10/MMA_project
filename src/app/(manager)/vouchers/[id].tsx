@@ -6,7 +6,6 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,10 +44,13 @@ export default function ManagerVoucherDetailScreen() {
   const issuedCount = voucher.totalQuantity - voucher.availableQuantity;
   const campaignRevenue = issuedCount * voucher.sellingPrice;
 
-  const handleConfirmStatus = () => {
-    if (confirmStatus) {
-      Alert.alert('Chưa hỗ trợ', 'Backend hiện chưa có API cập nhật trạng thái voucher.');
+  const handleConfirmStatus = async () => {
+    if (!confirmStatus) return;
+    try {
+      await updateVoucherStatus(voucher.id, confirmStatus);
       setConfirmStatus(null);
+    } catch (error) {
+      Alert.alert('Không thể cập nhật', error instanceof Error ? error.message : 'Vui lòng thử lại.');
     }
   };
 

@@ -3,14 +3,14 @@ import { View, Image, Text, StyleSheet, ViewStyle } from 'react-native';
 import { BorderRadius, Colors, Shadows } from '../../constants/theme';
 
 interface BrandLogoProps {
-  url: string;
+  url?: string;
   name: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   style?: ViewStyle;
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({
-  url,
+  url = '',
   name,
   size = 'md',
   style,

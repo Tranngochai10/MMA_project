@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '../components/common/ScreenContainer';
@@ -16,7 +16,8 @@ import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants
 import { useApp } from '../context/AppContext';
 
 export default function LoginScreen() {
-  const { login } = useApp();
+  const { login, toggleFavoriteVoucher } = useApp();
+  const { returnToVoucherId, returnToFavoriteVoucherId } = useLocalSearchParams<{ returnToVoucherId?: string; returnToFavoriteVoucherId?: string }>();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -58,7 +59,15 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const role = await login(email.trim(), password, rememberMe);
-      router.replace(role === 'MANAGER' ? '/(manager)/dashboard' : '/(user)/home');
+      if (role === 'USER' && returnToFavoriteVoucherId) {
+        const voucherId = String(returnToFavoriteVoucherId);
+        await toggleFavoriteVoucher(voucherId);
+        router.replace(`/(user)/vouchers/${voucherId}`);
+      } else if (role === 'USER' && returnToVoucherId) {
+        router.replace({ pathname: '/(user)/checkout', params: { voucherId: returnToVoucherId } });
+      } else {
+        router.replace(role === 'MANAGER' ? '/(manager)/dashboard' : '/(user)/home');
+      }
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : 'Đăng nhập không thành công.');
     } finally {

@@ -4,19 +4,21 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../components/common/ScreenContainer';
 import { FormInput } from '../components/common/FormInput';
 import { PrimaryButton } from '../components/common/PrimaryButton';
+import { api } from '../services/api';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
-  const handleSendLink = () => {
+  const handleSendLink = async () => {
     if (!email.trim()) {
       setError('Vui lòng nhập địa chỉ email');
       return;
@@ -26,7 +28,12 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    setError('Backend hiện chưa có API gửi liên kết đặt lại mật khẩu. Vui lòng liên hệ bộ phận hỗ trợ.');
+    try {
+      const result = await api.forgotPassword(email.trim());
+      const continueToReset = () => router.push({ pathname: '/reset-password', params: { email: email.trim(), otp: result.mockOtp || '' } });
+      if (result.mockOtp) Alert.alert('Mã OTP khôi phục', `Mã demo của bạn: ${result.mockOtp}`, [{ text: 'Tiếp tục', onPress: continueToReset }]);
+      else continueToReset();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Không thể tạo mã OTP. Vui lòng thử lại.'); }
   };
 
   return (
@@ -49,14 +56,14 @@ export default function ForgotPasswordScreen() {
         {/* Header */}
         <Text style={styles.title}>Quên mật khẩu?</Text>
         <Text style={styles.subtitle}>
-          Nhập địa chỉ email đã đăng ký của bạn để nhận hướng dẫn đặt lại mật khẩu mới.
+          Nhập email đã đăng ký để tạo mã OTP khôi phục mật khẩu.
         </Text>
 
         {/* Simulation note */}
         <View style={styles.simulationBadge}>
           <Ionicons name="information-circle-outline" size={16} color={Colors.primaryCoral} />
           <Text style={styles.simulationText}>
-            Tính năng đặt lại mật khẩu chưa được backend hỗ trợ.
+            Chế độ demo: mã OTP sẽ được trả về từ máy chủ để bạn nhập ở bước tiếp theo.
           </Text>
         </View>
 
@@ -77,7 +84,7 @@ export default function ForgotPasswordScreen() {
           />
 
           <PrimaryButton
-            title="Kiểm tra hỗ trợ đặt lại"
+            title="Tạo mã OTP"
             onPress={handleSendLink}
             style={styles.sendButton}
           />

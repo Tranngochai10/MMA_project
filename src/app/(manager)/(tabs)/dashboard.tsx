@@ -17,10 +17,10 @@ import { useApp } from '../../../context/AppContext';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 
 export default function ManagerDashboardScreen() {
-  const { currentUser, managerStats, orders, managerRedemptions, setRole } = useApp();
+  const { currentUser, managerStats, managerRecentOrders, managerRedemptions, setRole } = useApp();
 
-  const assignedBrandName = currentUser.assignedBrandName || 'Starbucks Coffee';
-  const recentOrders = orders.slice(0, 3);
+  const assignedBrandName = currentUser.assignedBrandName || 'Thương hiệu đối tác';
+  const recentOrders = managerRecentOrders.slice(0, 3);
   const recentRedemptions = managerRedemptions.slice(0, 2);
 
   return (
@@ -34,7 +34,6 @@ export default function ManagerDashboardScreen() {
             style={styles.avatarRow}
           >
             <BrandLogo
-              url="https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=200&auto=format&fit=crop&q=80"
               name={assignedBrandName}
               size="md"
             />
