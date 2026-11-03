@@ -6,6 +6,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const cors = require('cors');
+const mongoose = require('mongoose');
 
 const { connectDatabase } = require('./config/database');
 const errorHandler = require('./middlewares/errorHandler');
@@ -48,15 +49,22 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+app.get('/api/ready', (req, res) => {
+  const ready = mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'unavailable', database: ready ? 'connected' : 'disconnected' });
+});
 
 // API Routes
+app.use('/api', require('./middlewares/validatePagination'));
 app.use('/api/auth', authRouter);
+app.use('/api/media', require('./routes/media'));
 app.use('/api/categories', categoriesRouter);
 app.use('/api/brands', brandsRouter);
 app.use('/api/vouchers', vouchersRouter);
 app.use('/api/favorites', favoritesRouter);
 app.use('/api/user-vouchers', userVouchersRouter);
 app.use('/api/orders', ordersRouter);
+app.use('/api/payments', require('./routes/payments'));
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/manager', managerRouter);
 

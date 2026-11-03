@@ -3,7 +3,7 @@ function errorHandler(err, req, res, next) {
     return next(err);
   }
 
-  const statusCode = err.statusCode || err.status || 500;
+  const statusCode = err.statusCode || err.status || (err.code === 11000 ? 409 : ['ValidationError', 'CastError'].includes(err.name) ? 400 : 500);
   const response = {
     success: false,
     message: err.message || 'Internal server error'

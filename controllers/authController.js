@@ -37,7 +37,7 @@ async function resetPassword(req, res) {
 }
 
 async function logout(req, res) {
-  const data = await authService.logout();
+  const data = await authService.logout(req.user._id);
   return sendSuccess(res, 200, 'Đăng xuất thành công', data);
 }
 

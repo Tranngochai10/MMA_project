@@ -1,3 +1,5 @@
+const { brandPresence, validateBrandPresence } = require('../utils/brandPresence');
+const { resolveVoucherImage } = require('../utils/voucherMedia');
 const mongoose = require('mongoose');
 const Brand = require('../models/Brand');
 const Category = require('../models/Category');
@@ -10,6 +12,7 @@ const orderRepository = require('../repositories/orderRepository');
 const userVoucherRepository = require('../repositories/userVoucherRepository');
 const notificationRepository = require('../repositories/notificationRepository');
 const ApiError = require('../utils/ApiError');
+const { validateVoucher, voucherImageUrl } = require('../validators/voucherValidator');
 
 function formatDateTime(date) {
   if (!date) return '';
@@ -40,13 +43,16 @@ async function createManagerBrand(data) {
     throw new ApiError(409, `Mã thương hiệu "${cleanCode}" đã tồn tại trên hệ thống`);
   }
 
+  const presence = validateBrandPresence(data);
   const brand = await brandRepository.create({
+    ...presence,
     name: data.name.trim(),
     code: cleanCode,
     categoryId: data.categoryId || null,
-    rating: data.rating ? Number(data.rating) : 4.8,
+    rating: data.rating ? Number(data.rating) : null,
     logo_url: data.logo_url || '',
     cover_image_url: data.cover_image_url || '',
+    address: typeof data.address === 'string' ? data.address.trim() : '',
     description: data.description || '',
     status: 'active'
   });
@@ -78,10 +84,12 @@ async function getManagerBrandById(id) {
     _id: brand._id,
     name: brand.name,
     code: brand.code,
+    ...brandPresence(brand),
+    address: brand.address || '',
     description: brand.description || '',
     logo_url: brand.logo_url || '',
     cover_image_url: brand.cover_image_url || '',
-    rating: brand.rating || 4.8,
+    rating: brand.rating ?? null,
     status: brand.status,
     categoryId: category._id || null,
     categoryName: category.name || 'General',
@@ -100,9 +108,10 @@ async function updateManagerBrand(id, data) {
     throw new ApiError(404, 'Không tìm thấy thương hiệu để cập nhật');
   }
 
-  const updateFields = {};
+  const updateFields = validateBrandPresence(data, existing);
   if (data.name !== undefined) updateFields.name = data.name.trim();
   if (data.description !== undefined) updateFields.description = data.description;
+  if (typeof data.address === 'string') updateFields.address = data.address.trim();
   if (data.logo_url !== undefined) updateFields.logo_url = data.logo_url;
   if (data.cover_image_url !== undefined) updateFields.cover_image_url = data.cover_image_url;
   if (data.rating !== undefined) updateFields.rating = Number(data.rating);
@@ -141,7 +150,7 @@ async function getDashboardStats(queryParams = {}) {
     activeVouchers,
     totalOrders,
     issuedVouchers,
-    simulatedRedemptions,
+    redeemedVouchers,
     totalRevenue,
     recentOrdersData,
     recentRedemptionsData
@@ -178,7 +187,7 @@ async function getDashboardStats(queryParams = {}) {
       activeVouchers,
       totalOrders,
       issuedVouchers,
-      simulatedRedemptions,
+      redeemedVouchers,
       totalRevenue
     },
     recentOrders,
@@ -199,6 +208,9 @@ function formatManagerVoucher(v) {
     brandId: brand._id ? brand._id.toString() : (v.brandId ? v.brandId.toString() : ''),
     brandName: brand.name || '',
     brandLogo: brand.logo_url || '',
+    brandSalesChannel: brandPresence(brand).salesChannel,
+    brandWebsiteUrl: brandPresence(brand).websiteUrl,
+    brandAddress: brand.address || '',
     title: v.title,
     description: v.description || '',
     category: category.name || 'General',
@@ -214,8 +226,8 @@ function formatManagerVoucher(v) {
     termsAndConditions: v.termsAndConditions || [],
     totalQuantity: v.totalQuantity,
     availableQuantity: v.availableQuantity,
-    coverImage: v.coverImage || v.thumbnail_url || '',
-    thumbnail_url: v.thumbnail_url || v.coverImage || '',
+    coverImage: resolveVoucherImage(v),
+    thumbnail_url: resolveVoucherImage(v, true),
     status: v.status,
     created_at: v.created_at
   };
@@ -253,6 +265,7 @@ async function getManagerVoucherById(id) {
 }
 
 async function createManagerVoucher(managerId, data) {
+  validateVoucher({ ...data, discountType: data.discountType || 'PERCENTAGE', discountValue: data.discountValue ?? 0, startDate: data.startDate || new Date() });
   if (!data.brandId) {
     throw new ApiError(400, 'Vui lòng chọn Thương hiệu đối tác (brandId)');
   }
@@ -317,8 +330,8 @@ async function createManagerVoucher(managerId, data) {
     startDate: data.startDate ? new Date(data.startDate) : new Date(),
     expirationDate: new Date(data.expirationDate),
     termsAndConditions: conditions,
-    coverImage: data.coverImage || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&auto=format&fit=crop&q=80',
-    thumbnail_url: data.thumbnail_url || data.coverImage || '',
+    coverImage: voucherImageUrl(data.coverImage),
+    thumbnail_url: voucherImageUrl(data.coverImage || data.thumbnail_url),
     status: data.status === 'DRAFT' ? 'DRAFT' : 'ACTIVE'
   });
 
@@ -340,8 +353,11 @@ async function updateManagerVoucher(id, data) {
   if (data.discountValue !== undefined) updateFields.discountValue = Number(data.discountValue);
   if (data.discountDisplay !== undefined) updateFields.discountDisplay = data.discountDisplay;
   if (data.expirationDate !== undefined) updateFields.expirationDate = new Date(data.expirationDate);
-  if (data.coverImage !== undefined) updateFields.coverImage = data.coverImage;
-  if (data.thumbnail_url !== undefined) updateFields.thumbnail_url = data.thumbnail_url;
+  if (data.coverImage !== undefined) {
+    updateFields.coverImage = voucherImageUrl(data.coverImage);
+    updateFields.thumbnail_url = updateFields.coverImage;
+  }
+  if (data.thumbnail_url !== undefined && data.coverImage === undefined) updateFields.thumbnail_url = voucherImageUrl(data.thumbnail_url);
   if (data.categoryId !== undefined) updateFields.categoryId = data.categoryId;
 
   if (data.totalQuantity !== undefined) {
@@ -361,7 +377,12 @@ async function updateManagerVoucher(id, data) {
       : [data.termsAndConditions];
   }
 
-  const updated = await voucherRepository.updateById(id, updateFields);
+  validateVoucher({ ...existing.toObject(), ...updateFields });
+  if (updateFields.totalQuantity !== undefined && updateFields.totalQuantity < existing.totalQuantity - existing.availableQuantity) {
+    throw new ApiError(400, 'Total quantity cannot be less than the number already issued.');
+  }
+  const updated = await voucherRepository.updateById(id, updateFields, { totalQuantity: existing.totalQuantity, availableQuantity: existing.availableQuantity });
+  if (!updated) throw new ApiError(409, 'Voucher changed during editing. Reload and try again.');
   return formatManagerVoucher(updated);
 }
 
@@ -403,6 +424,7 @@ async function getManagerOrders(queryParams = {}) {
 
       return {
         _id: ord._id,
+        paymentReference: ord.paymentReference,
         id: ord.orderCode,
         orderCode: ord.orderCode,
         customerName: user.full_name || 'Khách hàng',
@@ -463,6 +485,7 @@ async function getManagerRedemptions(queryParams = {}) {
 }
 
 async function verifyVoucherAtCounter(voucherCode) {
+  voucherCode = require('./voucherQrService').decodeRedemption(voucherCode);
   if (!voucherCode) {
     throw new ApiError(400, 'Vui lòng nhập hoặc quét mã voucher');
   }
@@ -512,17 +535,18 @@ async function verifyVoucherAtCounter(voucherCode) {
       email: customer.email || ''
     },
     voucher: {
-      title: voucher.title,
-      discountDisplay: voucher.discountDisplay,
-      sellingPrice: voucher.sellingPrice,
-      originalValue: voucher.originalValue,
-      brandName: brand.name || '',
-      brandLogo: brand.logo_url || ''
+      title: userVoucher.snapshot?.title ?? voucher.title,
+      discountDisplay: userVoucher.snapshot?.discountDisplay ?? voucher.discountDisplay,
+      sellingPrice: userVoucher.snapshot?.sellingPrice ?? voucher.sellingPrice,
+      originalValue: userVoucher.snapshot?.originalValue ?? voucher.originalValue,
+      brandName: userVoucher.snapshot?.brandName ?? (brand.name || ''),
+      brandLogo: userVoucher.snapshot?.brandLogo ?? (brand.logo_url || '')
     }
   };
 }
 
-async function redeemVoucherAtCounter(voucherCode) {
+async function redeemVoucherAtCounter(voucherCode, managerId) {
+  voucherCode = require('./voucherQrService').decodeRedemption(voucherCode);
   if (!voucherCode) {
     throw new ApiError(400, 'Vui lòng nhập mã voucher cần sử dụng');
   }
@@ -550,9 +574,8 @@ async function redeemVoucherAtCounter(voucherCode) {
     throw new ApiError(400, 'Mã voucher này đã hết hạn sử dụng');
   }
 
-  userVoucher.is_used = true;
-  userVoucher.used_at = now;
-  await userVoucher.save();
+  const redeemed = await userVoucherRepository.markAsUsed(userVoucher._id, now, managerId, 'MANAGER');
+  if (!redeemed) throw new ApiError(409, 'Voucher was already redeemed or has expired.');
 
   // Gửi thông báo cho khách hàng
   if (userVoucher.userId) {
@@ -563,7 +586,7 @@ async function redeemVoucherAtCounter(voucherCode) {
       title: 'Đổi voucher tại quầy thành công',
       message: `Voucher ${userVoucher.voucherCode} (${voucher.title || 'Ưu đãi'}) đã được nhân viên cửa hàng quét áp dụng.`,
       actionUrl: '/(user)/wallet'
-    });
+    }).catch(error => console.error('Redemption notification failed:', error.message));
   }
 
   return {

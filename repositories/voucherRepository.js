@@ -12,6 +12,7 @@ async function findWithFilters({
   const now = new Date();
   const query = {
     status: 'ACTIVE',
+    startDate: { $lte: now },
     expirationDate: { $gt: now },
     availableQuantity: { $gt: 0 }
   };
@@ -43,9 +44,9 @@ async function findWithFilters({
 
   const [vouchers, total] = await Promise.all([
     Voucher.find(query)
-      .populate('brandId', 'name code logo_url rating')
+      .populate('brandId', 'name code logo_url cover_image_url address rating salesChannel websiteUrl')
       .populate('categoryId', 'name slug icon')
-      .sort(sortOption)
+      .sort({ ...sortOption, _id: 1 })
       .skip(skip)
       .limit(limit),
     Voucher.countDocuments(query)
@@ -56,7 +57,7 @@ async function findWithFilters({
 
 async function findById(id, session = null) {
   const query = Voucher.findById(id)
-    .populate('brandId', 'name code logo_url cover_image_url description rating')
+    .populate('brandId', 'name code logo_url cover_image_url description rating address salesChannel websiteUrl')
     .populate('categoryId', 'name slug icon');
 
   if (session) {
@@ -70,6 +71,7 @@ async function findRecommended(topCategoryIds = [], limit = 10) {
   const now = new Date();
   const baseQuery = {
     status: 'ACTIVE',
+    startDate: { $lte: now },
     expirationDate: { $gt: now },
     availableQuantity: { $gt: 0 }
   };
@@ -81,7 +83,7 @@ async function findRecommended(topCategoryIds = [], limit = 10) {
       ...baseQuery,
       categoryId: { $in: categoryObjectIds }
     })
-      .populate('brandId', 'name code logo_url rating')
+      .populate('brandId', 'name code logo_url cover_image_url address rating salesChannel websiteUrl')
       .populate('categoryId', 'name slug icon')
       .sort({ discountValue: -1, created_at: -1 })
       .limit(limit);
@@ -98,7 +100,7 @@ async function findRecommended(topCategoryIds = [], limit = 10) {
       ...baseQuery,
       _id: { $nin: excludeIds }
     })
-      .populate('brandId', 'name code logo_url rating')
+      .populate('brandId', 'name code logo_url cover_image_url address rating salesChannel websiteUrl')
       .populate('categoryId', 'name slug icon')
       .sort({ discountValue: -1, created_at: -1 })
       .limit(remainingLimit);
@@ -108,7 +110,7 @@ async function findRecommended(topCategoryIds = [], limit = 10) {
 
   // Fallback cho user mới: trả về voucher có discount cao nhất
   return Voucher.find(baseQuery)
-    .populate('brandId', 'name code logo_url rating')
+    .populate('brandId', 'name code logo_url cover_image_url address rating salesChannel websiteUrl')
     .populate('categoryId', 'name slug icon')
     .sort({ discountValue: -1, created_at: -1 })
     .limit(limit);
@@ -121,9 +123,10 @@ async function findByIds(ids) {
   return Voucher.find({
     _id: { $in: ids },
     status: 'ACTIVE',
+    startDate: { $lte: now },
     expirationDate: { $gt: now }
   })
-    .populate('brandId', 'name code logo_url rating')
+    .populate('brandId', 'name code logo_url cover_image_url address rating salesChannel websiteUrl')
     .populate('categoryId', 'name slug icon')
     .sort({ discountValue: -1 });
 }
@@ -135,10 +138,11 @@ async function decrementAvailableQuantity(voucherId, session = null) {
       _id: voucherId,
       availableQuantity: { $gt: 0 },
       status: 'ACTIVE',
-      expirationDate: { $gt: now }
+      startDate: { $lte: now },
+    expirationDate: { $gt: now }
     },
     { $inc: { availableQuantity: -1 } },
-    { returnDocument: 'after' }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (session) {
@@ -170,7 +174,7 @@ async function findManagerVouchers(filter = {}, pagination = {}) {
 
   const [vouchers, total] = await Promise.all([
     Voucher.find(query)
-      .populate('brandId', 'name code logo_url rating')
+      .populate('brandId', 'name code logo_url cover_image_url address rating salesChannel websiteUrl')
       .populate('categoryId', 'name slug icon')
       .sort({ created_at: -1 })
       .skip(skip)
@@ -181,9 +185,9 @@ async function findManagerVouchers(filter = {}, pagination = {}) {
   return { vouchers, total, page: Number(page), limit: Number(limit) };
 }
 
-async function updateById(id, updateData) {
-  return Voucher.findByIdAndUpdate(id, updateData, { returnDocument: 'after' })
-    .populate('brandId', 'name code logo_url cover_image_url rating')
+async function updateById(id, updateData, expected = {}) {
+  return Voucher.findOneAndUpdate({ _id: id, ...expected }, updateData, { returnDocument: 'after', runValidators: true })
+    .populate('brandId', 'name code logo_url cover_image_url address rating salesChannel websiteUrl')
     .populate('categoryId', 'name slug icon');
 }
 
@@ -191,9 +195,9 @@ async function updateStatus(id, status) {
   return Voucher.findByIdAndUpdate(
     id,
     { status: status.toUpperCase() },
-    { returnDocument: 'after' }
+    { returnDocument: 'after', runValidators: true }
   )
-    .populate('brandId', 'name code logo_url cover_image_url rating')
+    .populate('brandId', 'name code logo_url cover_image_url address rating salesChannel websiteUrl')
     .populate('categoryId', 'name slug icon');
 }
 

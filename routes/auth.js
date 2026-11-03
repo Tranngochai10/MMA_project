@@ -12,6 +12,12 @@ const {
 } = require('../validators/authValidator');
 
 const router = express.Router();
+const rateLimit = require('../middlewares/rateLimit');
+const recoveryLimit = rateLimit({ max: 10, windowMs: 15 * 60 * 1000 });
+const loginLimit = rateLimit({ max: 30, windowMs: 15 * 60 * 1000 });
+router.use('/login', loginLimit);
+router.use('/forgot-password', recoveryLimit);
+router.use('/reset-password', recoveryLimit);
 
 // Public routes
 router.post('/register', validateRegister, asyncHandler(authController.register));

@@ -17,6 +17,9 @@ async function authenticate(req, res, next) {
     if (!user) {
       throw new ApiError(401, 'Invalid authentication token');
     }
+    if (user.status === 'blocked' || (payload.token_version || 0) !== (user.tokenVersion || 0)) {
+      throw new ApiError(401, 'Session revoked. Please log in again.');
+    }
 
     req.auth = payload;
     req.user = user;

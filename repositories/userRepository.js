@@ -31,7 +31,7 @@ async function getRoleNamesByUserId(userId) {
 }
 
 async function updateById(userId, updateData) {
-  return User.findByIdAndUpdate(userId, updateData, { returnDocument: 'after' }).select('-password');
+  return User.findByIdAndUpdate(userId, updateData, { returnDocument: 'after', runValidators: true }).select('-password');
 }
 
 async function toggleFavoriteBrand(userId, brandId) {
@@ -84,7 +84,33 @@ async function getFavoriteVoucherIds(userId) {
   return user ? user.favoriteVoucherIds : [];
 }
 
+async function revokeSessions(userId) {
+  return User.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } });
+}
+
+async function setPasswordAndRevoke(userId, password) {
+  return User.updateOne({ _id: userId }, {
+    $set: { password, resetOtp: null, resetOtpHash: null, resetOtpExpires: null, resetOtpAttempts: 0 },
+    $inc: { tokenVersion: 1 }
+  });
+}
+
+async function recordResetFailure(userId, hash) {
+  return User.updateOne({ _id: userId, resetOtpHash: hash }, { $inc: { resetOtpAttempts: 1 } });
+}
+
+async function consumeResetCode(userId, hash, password) {
+  return User.findOneAndUpdate({
+    _id: userId, resetOtpHash: hash, resetOtpExpires: { $gt: new Date() },
+    resetOtpAttempts: { $lt: 5 }, status: 'active'
+  }, {
+    $set: { password, resetOtp: null, resetOtpHash: null, resetOtpExpires: null, resetOtpAttempts: 0 },
+    $inc: { tokenVersion: 1 }
+  }, { returnDocument: 'after', runValidators: true });
+}
+
 module.exports = {
+  revokeSessions, setPasswordAndRevoke, recordResetFailure, consumeResetCode,
   findByEmail,
   findByEmailWithPassword,
   findById,

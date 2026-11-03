@@ -1,3 +1,4 @@
+const { brandPresence, validateBrandPresence } = require('../utils/brandPresence');
 const brandRepository = require('../repositories/brandRepository');
 const userRepository = require('../repositories/userRepository');
 const ApiError = require('../utils/ApiError');
@@ -15,9 +16,11 @@ async function getAllBrands(currentUserId = null) {
     _id: b._id,
     name: b.name,
     code: b.code,
-    rating: b.rating || 4.8,
+    rating: b.rating ?? null,
     logo_url: b.logo_url || '',
     cover_image_url: b.cover_image_url || '',
+    ...brandPresence(b),
+    address: b.address || '',
     description: b.description || '',
     categoryName: b.categoryName || 'General',
     categoryId: b.categoryId || null,
@@ -42,9 +45,11 @@ async function getBrandById(id, currentUserId = null) {
     _id: brand._id,
     name: brand.name,
     code: brand.code,
-    rating: brand.rating || 4.8,
+    rating: brand.rating ?? null,
     logo_url: brand.logo_url || '',
     cover_image_url: brand.cover_image_url || '',
+    ...brandPresence(brand),
+    address: brand.address || '',
     description: brand.description || '',
     category: brand.categoryId ? brand.categoryId.name : 'General',
     isFavorite: isFavorite
@@ -62,13 +67,16 @@ async function createBrand(payload) {
     throw new ApiError(409, `Mã thương hiệu "${code}" đã tồn tại trên hệ thống`);
   }
 
+  const presence = validateBrandPresence(payload);
   const brand = await brandRepository.create({
+    ...presence,
     name: payload.name.trim(),
     code: code,
     categoryId: payload.categoryId || null,
-    rating: payload.rating || 4.8,
+    rating: payload.rating ?? null,
     logo_url: payload.logo_url || '',
     cover_image_url: payload.cover_image_url || '',
+    address: typeof payload.address === 'string' ? payload.address.trim() : '',
     description: payload.description || '',
     status: 'active'
   });

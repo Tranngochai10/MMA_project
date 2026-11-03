@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Cà phê & Trà",
+    "slug": "coffee-tea",
+    "icon": "cafe-outline",
+    "order": 1,
+    "status": "active"
+  },
+  {
+    "name": "Ẩm thực & Nhà hàng",
+    "slug": "food-dining",
+    "icon": "restaurant-outline",
+    "order": 2,
+    "status": "active"
+  },
+  {
+    "name": "Giải trí & Phim ảnh",
+    "slug": "entertainment",
+    "icon": "film-outline",
+    "order": 3,
+    "status": "active"
+  },
+  {
+    "name": "Công nghệ & Thiết bị",
+    "slug": "tech-gadgets",
+    "icon": "laptop-outline",
+    "order": 4,
+    "status": "active"
+  },
+  {
+    "name": "Làm đẹp & Spa",
+    "slug": "beauty-spa",
+    "icon": "sparkles-outline",
+    "order": 5,
+    "status": "active"
+  },
+  {
+    "name": "Du lịch & Khách sạn",
+    "slug": "travel-hotel",
+    "icon": "airplane-outline",
+    "order": 6,
+    "status": "active"
+  },
+  {
+    "name": "Bách hóa & Tiêu dùng",
+    "slug": "groceries",
+    "icon": "cart-outline",
+    "order": 7,
+    "status": "active"
+  },
+  {
+    "name": "Thể thao & Thể hình",
+    "slug": "fitness",
+    "icon": "barbell-outline",
+    "order": 8,
+    "status": "active"
+  }
+]

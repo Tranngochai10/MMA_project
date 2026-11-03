@@ -1,4 +1,5 @@
 const express = require('express');
+const brandUpload = require('../middlewares/brandUpload');
 const brandController = require('../controllers/brandController');
 const authenticate = require('../middlewares/authenticate');
 const authorizeRoles = require('../middlewares/authorizeRoles');
@@ -14,6 +15,7 @@ router.post(
   '/',
   authenticate,
   authorizeRoles(ROLES.MANAGER),
+  brandUpload,
   asyncHandler(brandController.createBrand)
 );
 

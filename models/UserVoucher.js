@@ -2,6 +2,14 @@ const mongoose = require('mongoose');
 
 const userVoucherSchema = new mongoose.Schema(
   {
+    snapshot: {
+      type: new mongoose.Schema({
+        title: String, description: String, brandName: String, brandLogo: String,
+        sellingPrice: Number, originalValue: Number, discountDisplay: String,
+        termsAndConditions: [String], coverImage: String
+      }, { _id: false }),
+      default: undefined
+    },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -44,6 +52,8 @@ const userVoucherSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    redeemedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    redemptionSource: { type: String, enum: ['USER_DEMO', 'MANAGER'], default: undefined },
     expires_at: {
       type: Date,
       required: true,

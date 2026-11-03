@@ -3,9 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "test": "node --test test/security_test.js test/brand_presence_test.js test/voucher_rules_test.js test/purchase_test.js test/wallet_snapshot_test.js test/voucher_detail_test.js test/voucher_image_test.js test/brand_upload_test.js test/voucher_qr_test.js test/payment_routes_test.js",
     "start": "node ./bin/www",
     "dev": "node ./bin/www",
-    "seed": "node ./scripts/seed.js"
+    "import:categories": "node ./scripts/import-categories.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -18,6 +19,8 @@
     "jade": "~1.11.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.4",
-    "morgan": "~1.9.1"
+    "morgan": "~1.9.1",
+    "multer": "^2.5.0",
+    "qrcode": "^1.5.4"
   }
 }

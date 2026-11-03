@@ -72,7 +72,7 @@ async function verifyVoucher(req, res) {
 }
 
 async function redeemVoucher(req, res) {
-  const result = await managerService.redeemVoucherAtCounter(req.body.voucherCode);
+  const result = await managerService.redeemVoucherAtCounter(req.body.voucherCode, req.user._id);
   return sendSuccess(res, 200, 'Xác nhận đổi voucher tại quầy thành công', result);
 }
 

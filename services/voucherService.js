@@ -1,11 +1,8 @@
-const mongoose = require('mongoose');
+const { brandPresence } = require('../utils/brandPresence');
+const { resolveVoucherImage } = require('../utils/voucherMedia');
 const voucherRepository = require('../repositories/voucherRepository');
 const userVoucherRepository = require('../repositories/userVoucherRepository');
 const userRepository = require('../repositories/userRepository');
-const brandRepository = require('../repositories/brandRepository');
-const orderRepository = require('../repositories/orderRepository');
-const notificationRepository = require('../repositories/notificationRepository');
-const { generateUniqueVoucherCode, generateOrderCode } = require('../utils/voucherCodeGenerator');
 const ApiError = require('../utils/ApiError');
 
 function formatVoucherCard(v, favoriteSet = new Set()) {
@@ -17,7 +14,10 @@ function formatVoucherCard(v, favoriteSet = new Set()) {
       name: v.brandId ? v.brandId.name : '',
       code: v.brandId ? v.brandId.code : '',
       logo_url: v.brandId ? v.brandId.logo_url : '',
-      rating: v.brandId ? v.brandId.rating : 4.8
+      ...brandPresence(v.brandId || {}),
+      address: v.brandId ? v.brandId.address || '' : '',
+      cover_image_url: v.brandId ? v.brandId.cover_image_url || '' : '',
+      rating: v.brandId ? v.brandId.rating : null
     },
     category: v.categoryId ? v.categoryId.name : 'General',
     categoryId: v.categoryId ? v.categoryId._id : null,
@@ -29,7 +29,8 @@ function formatVoucherCard(v, favoriteSet = new Set()) {
     originalValue: v.originalValue,
     expirationDate: v.expirationDate,
     availableQuantity: v.availableQuantity,
-    thumbnail_url: v.thumbnail_url || v.coverImage || '',
+    coverImage: resolveVoucherImage(v),
+    thumbnail_url: resolveVoucherImage(v, true),
     isFavorite: favoriteSet.has(v._id.toString())
   };
 }
@@ -39,6 +40,7 @@ async function getVouchers({
   brandId,
   search,
   sort,
+  recommended = false,
   page = 1,
   limit = 20,
   currentUserId = null
@@ -52,7 +54,7 @@ async function getVouchers({
   // Nếu người dùng không truyền bộ lọc tìm kiếm nào và đang ở trang 1 -> Sử dụng gợi ý cá nhân hóa
   const hasSpecificFilter = categoryId || brandId || (search && search.trim()) || sort;
 
-  if (!hasSpecificFilter && currentUserId) {
+  if (recommended && !hasSpecificFilter && currentUserId && Number(page) === 1) {
     const topCategoryIds = await userVoucherRepository.getTopCategoryIdsByUserId(currentUserId, 3);
     const recommendedList = await voucherRepository.findRecommended(topCategoryIds, limit);
     return {
@@ -102,9 +104,13 @@ async function getVoucherById(id, currentUserId = null) {
       name: voucher.brandId ? voucher.brandId.name : '',
       code: voucher.brandId ? voucher.brandId.code : '',
       logo_url: voucher.brandId ? voucher.brandId.logo_url : '',
+      ...brandPresence(voucher.brandId || {}),
+      address: voucher.brandId ? voucher.brandId.address : '',
       cover_image_url: voucher.brandId ? voucher.brandId.cover_image_url : '',
-      rating: voucher.brandId ? voucher.brandId.rating : 4.8
+      rating: voucher.brandId ? voucher.brandId.rating : null
     },
+    status: voucher.status,
+    categoryId: voucher.categoryId ? voucher.categoryId._id : null,
     category: voucher.categoryId ? voucher.categoryId.name : 'General',
     discountType: voucher.discountType,
     discountValue: voucher.discountValue,
@@ -115,152 +121,16 @@ async function getVoucherById(id, currentUserId = null) {
     availableQuantity: voucher.availableQuantity,
     startDate: voucher.startDate,
     expirationDate: voucher.expirationDate,
-    termsAndConditions: voucher.termsAndConditions.length
+    termsAndConditions: voucher.termsAndConditions?.length
       ? voucher.termsAndConditions
-      : [
-          'Áp dụng tại tất cả các chi nhánh chính hãng trên toàn quốc.',
-          'Mỗi mã ưu đãi chỉ có giá trị sử dụng 01 lần.',
-          'Không áp dụng đồng thời với các chương trình khuyến mãi khác.',
-          'Vui lòng xuất trình mã voucher cho nhân viên trước khi thanh toán.'
-        ],
-    coverImage: voucher.coverImage || '',
-    thumbnail_url: voucher.thumbnail_url || voucher.coverImage || '',
+      : ['Vui lòng xem điều kiện do thương hiệu công bố trước khi sử dụng voucher.'],
+    coverImage: resolveVoucherImage(voucher),
+    thumbnail_url: resolveVoucherImage(voucher, true),
     isFavorite: isFavorite
   };
 }
 
-function canUseTransactions() {
-  try {
-    const topology = mongoose.connection.client && mongoose.connection.client.topology;
-    if (!topology || !topology.description) return false;
-    const type = topology.description.type;
-    return type === 'ReplicaSetWithPrimary' || type === 'Sharded';
-  } catch {
-    return false;
-  }
+async function buyVoucher(voucherId, userId, paymentMethod, requestKey) {
+  return require('./paymentService').createTransferOrder(voucherId, userId, requestKey);
 }
-
-/**
- * Mua voucher có bọc trong MongoDB Session / Transaction đảm bảo toàn vẹn dữ liệu
- */
-async function buyVoucher(voucherId, userId, paymentMethod = 'Credit Card') {
-  let session = null;
-  let isTransactionActive = false;
-
-  if (canUseTransactions()) {
-    try {
-      session = await mongoose.startSession();
-      session.startTransaction();
-      isTransactionActive = true;
-    } catch {
-      session = null;
-      isTransactionActive = false;
-    }
-  }
-
-  try {
-    // 1. Kiểm tra và giảm số lượng tồn kho theo Atomic Update
-    const voucher = await voucherRepository.decrementAvailableQuantity(
-      voucherId,
-      isTransactionActive ? session : null
-    );
-
-    if (!voucher) {
-      throw new ApiError(400, 'Voucher đã hết số lượng khả dụng hoặc đã hết hạn');
-    }
-
-    // 2. Lấy thông tin thương hiệu để lấy mã Brand Code (2 chữ cái)
-    const brand = await brandRepository.findById(voucher.brandId);
-    const brandCode = brand ? brand.code : 'VC';
-
-    // 3. Sinh mã đơn hàng chuẩn (VD: ORD-94821)
-    const orderCode = generateOrderCode();
-
-    // 4. Tạo bản ghi Đơn hàng (Order) trước
-    const purchasedDate = new Date();
-    const order = await orderRepository.create(
-      {
-        orderCode: orderCode,
-        userId: userId,
-        voucherId: voucher._id,
-        brandId: voucher.brandId,
-        walletVoucherId: null,
-        totalAmount: voucher.sellingPrice,
-        paymentMethod: paymentMethod || 'Credit Card',
-        status: 'PAID'
-      },
-      isTransactionActive ? session : null
-    );
-
-    // 5. Sinh mã voucher duy nhất: 2 chữ Brand + 6 số ngẫu nhiên (VD: SB184920)
-    const voucherCode = await generateUniqueVoucherCode(
-      brandCode,
-      isTransactionActive ? session : null
-    );
-
-    // 6. Tạo bản ghi sở hữu vào UserVoucher (liên kết với orderId và orderCode)
-    const userVoucher = await userVoucherRepository.create(
-      {
-        userId: userId,
-        voucherId: voucher._id,
-        orderId: order._id,
-        orderCode: orderCode,
-        voucherCode: voucherCode,
-        is_used: false,
-        used_at: null,
-        expires_at: voucher.expirationDate,
-        purchased_at: purchasedDate
-      },
-      isTransactionActive ? session : null
-    );
-
-    // 7. Cập nhật walletVoucherId trên Order
-    order.walletVoucherId = userVoucher._id;
-    await order.save({ session: isTransactionActive ? session : null });
-
-    // 8. Tạo bản ghi Notification tự động cho User
-    await notificationRepository.create(
-      {
-        userId: userId,
-        type: 'PURCHASE_SUCCESS',
-        title: 'Đặt mua voucher thành công! 🎉',
-        message: `Voucher "${voucher.title}" của thương hiệu ${brand ? brand.name : ''} đã được lưu vào ví của bạn.`,
-        actionUrl: '/(user)/wallet'
-      },
-      isTransactionActive ? session : null
-    );
-
-    if (isTransactionActive && session) {
-      await session.commitTransaction();
-    }
-
-    return {
-      orderId: order._id,
-      orderCode: orderCode,
-      walletVoucherId: userVoucher._id,
-      voucherCode: voucherCode,
-      voucherTitle: voucher.title,
-      brandName: brand ? brand.name : '',
-      brandLogo: brand ? brand.logo_url : '',
-      totalAmount: voucher.sellingPrice,
-      paymentMethod: paymentMethod || 'Credit Card',
-      purchasedDate: purchasedDate.toISOString(),
-      expirationDate: voucher.expirationDate.toISOString()
-    };
-  } catch (error) {
-    if (isTransactionActive && session) {
-      await session.abortTransaction();
-    }
-    throw error;
-  } finally {
-    if (session) {
-      session.endSession();
-    }
-  }
-}
-
-module.exports = {
-  getVouchers,
-  getVoucherById,
-  buyVoucher
-};
+module.exports = { getVouchers, getVoucherById, buyVoucher };

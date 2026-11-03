@@ -50,7 +50,10 @@ async function findAllWithActiveVoucherCount() {
         _id: 1,
         name: 1,
         code: 1,
-        rating: { $ifNull: ['$rating', 4.8] },
+        rating: { $ifNull: ['$rating', null] },
+        address: 1,
+        salesChannel: 1,
+        websiteUrl: 1,
         logo_url: 1,
         cover_image_url: 1,
         description: 1,
@@ -124,7 +127,10 @@ async function findByIds(ids) {
         _id: 1,
         name: 1,
         code: 1,
-        rating: { $ifNull: ['$rating', 4.8] },
+        rating: { $ifNull: ['$rating', null] },
+        address: 1,
+        salesChannel: 1,
+        websiteUrl: 1,
         logo_url: 1,
         cover_image_url: 1,
         description: 1,
@@ -144,7 +150,7 @@ async function create(data) {
 }
 
 async function updateById(id, updateData) {
-  return Brand.findByIdAndUpdate(id, updateData, { returnDocument: 'after' }).populate(
+  return Brand.findByIdAndUpdate(id, updateData, { returnDocument: 'after', runValidators: true }).populate(
     'categoryId',
     'name slug icon'
   );

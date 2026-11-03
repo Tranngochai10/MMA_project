@@ -26,7 +26,7 @@ const brandSchema = new mongoose.Schema(
     },
     rating: {
       type: Number,
-      default: 4.8,
+      default: null,
       min: 1,
       max: 5
     },
@@ -38,6 +38,9 @@ const brandSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    address: { type: String, trim: true, default: "" },
+    salesChannel: { type: String, enum: ['STORE', 'ONLINE'], default: 'STORE' },
+    websiteUrl: { type: String, trim: true, default: '' },
     description: {
       type: String,
       default: ''

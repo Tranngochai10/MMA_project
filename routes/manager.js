@@ -1,4 +1,5 @@
 const express = require('express');
+const brandUpload = require('../middlewares/brandUpload');
 const managerController = require('../controllers/managerController');
 const authenticate = require('../middlewares/authenticate');
 const authorizeRoles = require('../middlewares/authorizeRoles');
@@ -9,12 +10,15 @@ const router = express.Router();
 
 // Tất cả các routes của Manager đều yêu cầu Bearer Token và Role MANAGER
 router.use(authenticate, authorizeRoles(ROLES.MANAGER));
+const rateLimit = require('../middlewares/rateLimit');
+router.use('/redemptions/verify', rateLimit({ max: 60, windowMs: 15 * 60 * 1000 }));
+router.use('/redemptions/redeem', rateLimit({ max: 60, windowMs: 15 * 60 * 1000 }));
 
 // 1. Quản lý Thương hiệu Đối tác (Brand Management)
 router.get('/brands', asyncHandler(managerController.getBrands));
-router.post('/brands', asyncHandler(managerController.createBrand));
+router.post('/brands', brandUpload, asyncHandler(managerController.createBrand));
 router.get('/brands/:id', asyncHandler(managerController.getBrandById));
-router.put('/brands/:id', asyncHandler(managerController.updateBrand));
+router.put('/brands/:id', brandUpload, asyncHandler(managerController.updateBrand));
 
 // 2. Thống kê & Dashboard
 router.get('/dashboard', asyncHandler(managerController.getDashboard));

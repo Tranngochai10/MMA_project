@@ -43,7 +43,7 @@ async function generateUniqueVoucherCode(brandCode, session = null) {
  * @returns {string}
  */
 function generateOrderCode() {
-  const randomNum = crypto.randomInt(10000, 100000);
+  const randomNum = crypto.randomUUID().replace(/-/g, '').toUpperCase();
   return `ORD-${randomNum}`;
 }
 

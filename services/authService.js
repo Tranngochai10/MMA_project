@@ -2,17 +2,22 @@ const ApiError = require('../utils/ApiError');
 const { comparePassword, hashPassword } = require('../utils/password');
 const { signAuthToken } = require('../utils/jwt');
 const userRepository = require('../repositories/userRepository');
-
 function sanitizeUser(user) {
   const plainUser = typeof user.toObject === 'function' ? user.toObject() : Object.assign({}, user);
   delete plainUser.password;
+  delete plainUser.resetOtp;
+  delete plainUser.resetOtpHash;
+  delete plainUser.resetOtpExpires;
+  delete plainUser.resetOtpAttempts;
+  delete plainUser.tokenVersion;
   return plainUser;
 }
 
 function buildAuthResponse(user) {
   const token = signAuthToken({
     user_id: user._id.toString(),
-    role: user.role
+    role: user.role,
+    token_version: user.tokenVersion || 0
   });
 
   return {
@@ -36,7 +41,7 @@ async function register(payload) {
     password: hashedPassword,
     phone: payload.phone || '',
     role: 'USER',
-    avatar_url: payload.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+    avatar_url: payload.avatar_url || '',
     status: 'active'
   });
 
@@ -89,9 +94,7 @@ async function changePassword(userId, payload) {
   }
 
   const hashedPassword = await hashPassword(payload.new_password);
-  await userRepository.updateById(user._id, {
-    password: hashedPassword
-  });
+  await userRepository.setPasswordAndRevoke(user._id, hashedPassword);
 
   return {
     success: true,
@@ -99,7 +102,8 @@ async function changePassword(userId, payload) {
   };
 }
 
-async function logout() {
+async function logout(userId) {
+  await userRepository.revokeSessions(userId);
   return {
     logged_out: true
   };
@@ -130,60 +134,9 @@ async function updateMe(userId, payload) {
   };
 }
 
-async function forgotPassword(payload) {
-  const email = (payload.email || '').toLowerCase().trim();
-  const user = await userRepository.findByEmail(email);
+async function forgotPassword() { throw new ApiError(503, 'Password recovery email delivery is not configured.'); }
 
-  if (!user) {
-    throw new ApiError(404, 'Email không tồn tại trong hệ thống');
-  }
-
-  // Tối giản Demo: sinh mã OTP 6 số (123456) hiển thị ngay trong response data cho FE
-  const mockOtp = '123456';
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
-
-  await userRepository.updateById(user._id, {
-    resetOtp: mockOtp,
-    resetOtpExpires: expiresAt
-  });
-
-  return {
-    email: user.email,
-    mockOtp: mockOtp,
-    expiresIn: '15 phút',
-    message: 'Mã xác thực OTP đã được tạo thành công (Chế độ Demo)'
-  };
-}
-
-async function resetPassword(payload) {
-  const email = (payload.email || '').toLowerCase().trim();
-  const otp = (payload.otp || '').trim();
-  const newPassword = payload.new_password;
-
-  const user = await userRepository.findByEmail(email);
-  if (!user) {
-    throw new ApiError(404, 'Email không tồn tại trong hệ thống');
-  }
-
-  const isMatch = (user.resetOtp && user.resetOtp === otp) || otp === '123456';
-  const isExpired = user.resetOtpExpires && new Date(user.resetOtpExpires) <= new Date();
-
-  if (!isMatch || (user.resetOtpExpires && isExpired)) {
-    throw new ApiError(400, 'Mã OTP không chính xác hoặc đã hết hạn sử dụng');
-  }
-
-  const hashedPassword = await hashPassword(newPassword);
-  await userRepository.updateById(user._id, {
-    password: hashedPassword,
-    resetOtp: null,
-    resetOtpExpires: null
-  });
-
-  return {
-    success: true,
-    message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.'
-  };
-}
+async function resetPassword() { throw new ApiError(503, 'Password recovery email delivery is not configured.'); }
 
 module.exports = {
   register,

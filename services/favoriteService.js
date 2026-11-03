@@ -1,3 +1,5 @@
+const { brandPresence } = require('../utils/brandPresence');
+const { resolveVoucherImage } = require('../utils/voucherMedia');
 const userRepository = require('../repositories/userRepository');
 const brandRepository = require('../repositories/brandRepository');
 const voucherRepository = require('../repositories/voucherRepository');
@@ -39,18 +41,32 @@ async function getFavoriteVouchers(userId) {
   return vouchers.map((v) => ({
     _id: v._id,
     title: v.title,
+    description: v.description || '',
     brand: {
       _id: v.brandId ? v.brandId._id : null,
       name: v.brandId ? v.brandId.name : '',
-      logo_url: v.brandId ? v.brandId.logo_url : ''
+      logo_url: v.brandId ? v.brandId.logo_url : '',
+      cover_image_url: v.brandId ? v.brandId.cover_image_url : '',
+      ...brandPresence(v.brandId || {}),
+      address: v.brandId ? v.brandId.address || '' : '',
+      rating: v.brandId ? v.brandId.rating : null
     },
     category: v.categoryId ? v.categoryId.name : 'General',
+    categoryId: v.categoryId ? v.categoryId._id : null,
+    discountType: v.discountType,
+    discountValue: v.discountValue,
     discountPercent: v.discountValue,
     discountDisplay: v.discountDisplay || `${v.discountValue}% OFF`,
     sellingPrice: v.sellingPrice,
     originalValue: v.originalValue,
+    totalQuantity: v.totalQuantity,
+    availableQuantity: v.availableQuantity,
+    startDate: v.startDate,
     expirationDate: v.expirationDate,
-    thumbnail_url: v.thumbnail_url || v.coverImage || '',
+    termsAndConditions: v.termsAndConditions || [],
+    coverImage: resolveVoucherImage(v),
+    thumbnail_url: resolveVoucherImage(v, true),
+    status: v.status,
     isFavorite: true
   }));
 }

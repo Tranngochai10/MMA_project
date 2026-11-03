@@ -55,6 +55,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    resetOtpHash: { type: String, default: null },
+    resetOtpAttempts: { type: Number, default: 0 },
+    tokenVersion: { type: Number, default: 0 },
     resetOtpExpires: {
       type: Date,
       default: null

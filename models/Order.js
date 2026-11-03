@@ -2,6 +2,18 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema(
   {
+    isDemo: { type: Boolean, default: false },
+    currency: { type: String, enum: ['VND'], default: 'VND' },
+    paymentReference: String,
+    bankDetails: { accountNumber: String, accountName: String, bankBin: String },
+    bankTransactionId: String,
+    voucherSnapshot: mongoose.Schema.Types.Mixed,
+    inventoryReserved: { type: Boolean, default: false },
+    paymentExpiresAt: Date,
+    confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    confirmedAt: Date,
+    requestKey: { type: String, default: undefined },
+    purchaseResult: { type: mongoose.Schema.Types.Mixed, default: undefined },
     // Mã đơn hàng định dạng chuẩn (VD: ORD-94821)
     orderCode: {
       type: String,
@@ -41,13 +53,13 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      default: 'Credit Card',
+      default: 'MB_BANK_TRANSFER',
       trim: true
     },
     status: {
       type: String,
       enum: ['PAID', 'PENDING', 'FAILED', 'CANCELLED'],
-      default: 'PAID',
+      default: 'PENDING',
       index: true
     }
   },
@@ -59,5 +71,8 @@ const orderSchema = new mongoose.Schema(
 // Indexes tối ưu truy vấn lịch sử đơn hàng
 orderSchema.index({ userId: 1, status: 1, created_at: -1 });
 orderSchema.index({ brandId: 1, status: 1, created_at: -1 });
+orderSchema.index({ userId: 1, requestKey: 1 }, { unique: true, partialFilterExpression: { requestKey: { $type: 'string' } } });
+orderSchema.index({ paymentReference: 1 }, { unique: true, partialFilterExpression: { paymentReference: { $type: 'string' } } });
+orderSchema.index({ bankTransactionId: 1 }, { unique: true, partialFilterExpression: { bankTransactionId: { $type: 'string' } } });
 
 module.exports = mongoose.model('Order', orderSchema);

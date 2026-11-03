@@ -8,6 +8,7 @@ async function getVouchers(req, res) {
     brandId: req.query.brandId,
     search: req.query.search,
     sort: req.query.sort,
+    recommended: req.query.recommended === 'true',
     page: req.query.page || 1,
     limit: req.query.limit || 20,
     currentUserId
@@ -25,10 +26,10 @@ async function getVoucherById(req, res) {
 async function buyVoucher(req, res) {
   const voucherId = req.params.id;
   const userId = req.user._id;
-  const paymentMethod = (req.body && req.body.paymentMethod) || 'Credit Card';
+  const paymentMethod = 'MB_BANK_TRANSFER';
 
-  const orderResult = await voucherService.buyVoucher(voucherId, userId, paymentMethod);
-  return sendSuccess(res, 200, 'Thanh toán và nhận voucher thành công', orderResult);
+  const orderResult = await voucherService.buyVoucher(voucherId, userId, paymentMethod, req.get('Idempotency-Key'));
+  return sendSuccess(res, 201, 'Đã tạo đơn chờ chuyển khoản MB', orderResult);
 }
 
 module.exports = {

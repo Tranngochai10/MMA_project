@@ -9,7 +9,7 @@ async function optionalAuthenticate(req, res, next) {
     if (parts.length === 2 && parts[0] === 'Bearer' && parts[1]) {
       const payload = verifyAuthToken(parts[1]);
       const user = await userRepository.findById(payload.user_id);
-      if (user) {
+      if (user && user.status !== 'blocked' && (payload.token_version || 0) === (user.tokenVersion || 0)) {
         req.auth = payload;
         req.user = user;
         req.token = parts[1];

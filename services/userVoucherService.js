@@ -1,5 +1,4 @@
 const userVoucherRepository = require('../repositories/userVoucherRepository');
-const notificationRepository = require('../repositories/notificationRepository');
 const ApiError = require('../utils/ApiError');
 
 async function getMyWalletVouchers(userId, status = 'all') {
@@ -9,6 +8,7 @@ async function getMyWalletVouchers(userId, status = 'all') {
   return userVouchers.map((uv) => {
     const voucher = uv.voucherId || {};
     const brand = voucher.brandId || {};
+    const snapshot = uv.snapshot;
 
     let statusKey = 'AVAILABLE';
     let statusText = 'Khả dụng';
@@ -26,13 +26,14 @@ async function getMyWalletVouchers(userId, status = 'all') {
       voucherId: voucher._id || null,
       voucherCode: uv.voucherCode,
       orderCode: uv.orderCode || '',
-      title: voucher.title || 'Ưu đãi voucher',
-      brandName: brand.name || 'Thương hiệu',
-      brandLogo: brand.logo_url || '',
-      discountDisplay: voucher.discountDisplay || 'Ưu đãi',
-      sellingPrice: voucher.sellingPrice || 0,
-      originalValue: voucher.originalValue || 0,
-      coverImage: voucher.coverImage || voucher.thumbnail_url || '',
+      title: snapshot?.title ?? (voucher.title || 'Ưu đãi voucher'),
+      brandName: snapshot?.brandName ?? (brand.name || 'Thương hiệu'),
+      brandLogo: snapshot?.brandLogo ?? (brand.logo_url || ''),
+      discountDisplay: snapshot?.discountDisplay ?? (voucher.discountDisplay || 'Ưu đãi'),
+      sellingPrice: snapshot?.sellingPrice ?? (voucher.sellingPrice || 0),
+      originalValue: snapshot?.originalValue ?? (voucher.originalValue || 0),
+      coverImage: snapshot?.coverImage ?? (voucher.coverImage || voucher.thumbnail_url || ''),
+      termsAndConditions: snapshot?.termsAndConditions ?? (voucher.termsAndConditions || []),
       status: statusKey,
       statusText: statusText,
       isUsed: uv.is_used,
@@ -46,68 +47,7 @@ async function getMyWalletVouchers(userId, status = 'all') {
 /**
  * Mô phỏng người dùng bấm sử dụng voucher ngay trên ứng dụng
  */
-async function useVoucher(identifier, userId) {
-  if (!identifier) {
-    throw new ApiError(400, 'Mã voucher hoặc ID không được để trống');
-  }
-
-  // 1. Tìm bản ghi trong UserVoucher theo ID hoặc voucherCode
-  const userVoucher = await userVoucherRepository.findByIdOrCode(identifier);
-  if (!userVoucher) {
-    throw new ApiError(404, 'Không tìm thấy voucher trong ví');
-  }
-
-  // 2. Kiểm tra quyền sở hữu
-  const ownerId = userVoucher.userId._id
-    ? userVoucher.userId._id.toString()
-    : userVoucher.userId.toString();
-
-  if (ownerId !== userId.toString()) {
-    throw new ApiError(403, 'Bạn không có quyền sử dụng voucher này');
-  }
-
-  // 3. Kiểm tra trạng thái đã dùng
-  if (userVoucher.is_used) {
-    throw new ApiError(400, 'Voucher này đã được sử dụng trước đó');
-  }
-
-  // 4. Kiểm tra thời hạn
-  const now = new Date();
-  if (new Date(userVoucher.expires_at) <= now) {
-    throw new ApiError(400, 'Voucher đã hết hạn sử dụng');
-  }
-
-  // 5. Cập nhật is_used = true, used_at = now
-  const updated = await userVoucherRepository.markAsUsed(userVoucher._id, now);
-  const voucher = updated.voucherId || {};
-  const brand = voucher.brandId || {};
-
-  // 6. Tự động gửi thông báo xác nhận sử dụng voucher
-  await notificationRepository.create({
-    userId: userId,
-    type: 'REDEMPTION_CONFIRMED',
-    title: 'Xác nhận đổi mã ưu đãi',
-    message: `Voucher ${updated.voucherCode} (${voucher.title || 'Ưu đãi'}) đã được xác nhận sử dụng thành công.`,
-    actionUrl: '/(user)/wallet'
-  });
-
-  return {
-    _id: updated._id,
-    voucherId: voucher._id || null,
-    voucherCode: updated.voucherCode,
-    orderCode: updated.orderCode || '',
-    title: voucher.title || 'Ưu đãi voucher',
-    brandName: brand.name || 'Thương hiệu',
-    brandLogo: brand.logo_url || '',
-    discountDisplay: voucher.discountDisplay || 'Ưu đãi',
-    status: 'USED',
-    statusText: 'Đã dùng',
-    isUsed: true,
-    usedAt: now.toISOString(),
-    expirationDate: updated.expires_at ? updated.expires_at.toISOString() : null,
-    purchasedDate: updated.purchased_at ? updated.purchased_at.toISOString() : null
-  };
-}
+async function useVoucher() { throw new ApiError(403, 'Please show the voucher QR to a manager for redemption.'); }
 
 async function getWalletVoucherById(identifier, userId) {
   if (!identifier) {
@@ -142,11 +82,12 @@ async function getWalletVoucherById(identifier, userId) {
     statusText = 'Hết hạn';
   }
 
-  const conditions = Array.isArray(voucher.termsAndConditions) && voucher.termsAndConditions.length
+  const snapshot = userVoucher.snapshot;
+  const conditions = snapshot?.termsAndConditions || (Array.isArray(voucher.termsAndConditions) && voucher.termsAndConditions.length
     ? voucher.termsAndConditions
     : Array.isArray(voucher.usageConditions) && voucher.usageConditions.length
     ? voucher.usageConditions
-    : ['Áp dụng quy định đổi voucher tiêu chuẩn của thương hiệu.'];
+    : ['Áp dụng quy định đổi voucher tiêu chuẩn của thương hiệu.']);
 
   return {
     _id: userVoucher._id,
@@ -154,13 +95,13 @@ async function getWalletVoucherById(identifier, userId) {
     voucherId: voucher._id || null,
     voucherCode: userVoucher.voucherCode,
     orderCode: userVoucher.orderCode || '',
-    title: voucher.title || 'Ưu đãi voucher',
-    brandName: brand.name || 'Thương hiệu',
-    brandLogo: brand.logo_url || '',
-    discountDisplay: voucher.discountDisplay || 'Ưu đãi',
-    sellingPrice: voucher.sellingPrice || 0,
-    originalValue: voucher.originalValue || 0,
-    coverImage: voucher.coverImage || voucher.thumbnail_url || '',
+    title: snapshot?.title ?? (voucher.title || 'Ưu đãi voucher'),
+    brandName: snapshot?.brandName ?? (brand.name || 'Thương hiệu'),
+    brandLogo: snapshot?.brandLogo ?? (brand.logo_url || ''),
+    discountDisplay: snapshot?.discountDisplay ?? (voucher.discountDisplay || 'Ưu đãi'),
+    sellingPrice: snapshot?.sellingPrice ?? (voucher.sellingPrice || 0),
+    originalValue: snapshot?.originalValue ?? (voucher.originalValue || 0),
+    coverImage: snapshot?.coverImage ?? (voucher.coverImage || voucher.thumbnail_url || ''),
     usageConditions: conditions,
     termsAndConditions: conditions,
     status: statusKey,

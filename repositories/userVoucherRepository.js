@@ -74,12 +74,14 @@ async function findByIdOrCode(identifier, session = null) {
   return query;
 }
 
-async function markAsUsed(id, usedAt = new Date()) {
-  return UserVoucher.findByIdAndUpdate(
-    id,
+async function markAsUsed(id, usedAt = new Date(), actorId = null, source = 'MANAGER') {
+  return UserVoucher.findOneAndUpdate(
+    { _id: id, is_used: false, expires_at: { $gt: usedAt } },
     {
       is_used: true,
-      used_at: usedAt
+      used_at: usedAt,
+      redeemedBy: actorId,
+      redemptionSource: source
     },
     { returnDocument: 'after' }
   ).populate({
