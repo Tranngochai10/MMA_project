@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { BorderRadius, Colors, Spacing, Typography } from '../../constants/theme';
+import { BorderRadius, Colors, Typography } from '../../constants/theme';
 import { formatCurrency } from '../../utils/formatters';
 
 interface PriceDisplayProps {
@@ -63,6 +63,8 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    flexWrap: 'wrap',
+    rowGap: 4,
   },
   sellingPrice: {
     ...Typography.h4,
@@ -70,10 +72,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   sellingPriceSm: {
-    fontSize: 13,
+    fontSize: 16,
   },
   sellingPriceLg: {
-    fontSize: 22,
+    fontSize: 28,
+    lineHeight: 36,
   },
   originalValue: {
     ...Typography.caption,
@@ -82,7 +85,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   originalValueSm: {
-    fontSize: 10,
+    fontSize: 12,
   },
   originalValueLg: {
     fontSize: 14,
@@ -97,6 +100,6 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     fontWeight: '700',
     color: Colors.primaryCoral,
-    fontSize: 10,
+    fontSize: 12,
   },
 });

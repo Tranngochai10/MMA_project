@@ -7,14 +7,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+
 import { ScreenContainer } from '../../../components/common/ScreenContainer';
 import { AppHeader } from '../../../components/common/AppHeader';
 import { SearchBar } from '../../../components/common/SearchBar';
 import { VoucherGrid } from '../../../components/voucher/VoucherGrid';
 import { FilterBottomSheet } from '../../../components/voucher/FilterBottomSheet';
 import { EmptyState } from '../../../components/common/EmptyState';
-import { CATEGORIES } from '../../../constants/categories';
+import { categoryChoices } from '../../../utils/categoryChoices';
 import { BorderRadius, Colors, Spacing, Typography } from '../../../constants/theme';
 import { useApp } from '../../../context/AppContext';
 import { FilterState, SortOption, Voucher, VoucherCategory } from '../../../types';
@@ -44,7 +44,7 @@ export default function DiscoverScreen() {
   }, [params]);
 
   const sortOptions: { id: SortOption; label: string }[] = [
-    { id: 'popular', label: 'Phổ biến nhất' },
+    { id: 'popular', label: 'Mặc định' },
     { id: 'discount_high', label: 'Giảm nhiều nhất' },
     { id: 'price_low', label: 'Giá: Thấp đến Cao' },
     { id: 'price_high', label: 'Giá: Cao đến Thấp' },
@@ -117,7 +117,7 @@ export default function DiscoverScreen() {
           contentContainerStyle={styles.categoryScroll}
           style={{ flexGrow: 0 }}
         >
-          {CATEGORIES.map((cat) => (
+          {categoryChoices(vouchers.map(v => v.category)).map((cat) => (
             <TouchableOpacity
               key={cat.id}
               activeOpacity={0.7}
@@ -223,8 +223,8 @@ const styles = StyleSheet.create({
   },
   categoryChip: {
     paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: BorderRadius.card,
+    paddingVertical: 10,
+    borderRadius: 10,
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
     height: 38,
     justifyContent: 'center',
     alignItems: 'center',
+    minHeight: 44,
   },
   categoryChipActive: {
     backgroundColor: Colors.primaryCoral,
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
   },
   sortChipText: {
     ...Typography.caption,
-    fontSize: 10,
+    fontSize: 12,
     color: Colors.secondaryText,
   },
   sortChipTextActive: {

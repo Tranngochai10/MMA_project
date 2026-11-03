@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { VoucherStatus, WalletVoucherStatus } from '../../types';
+import { VoucherStatus, WalletVoucherStatus, OrderStatus } from '../../types';
 import { BorderRadius, Colors, Typography } from '../../constants/theme';
 
-type CombinedStatus = VoucherStatus | WalletVoucherStatus;
+type CombinedStatus = VoucherStatus | WalletVoucherStatus | OrderStatus;
 
 interface VoucherStatusBadgeProps {
   status: CombinedStatus;
@@ -16,6 +16,14 @@ export const VoucherStatusBadge: React.FC<VoucherStatusBadgeProps> = ({
 }) => {
   const getBadgeConfig = () => {
     switch (status) {
+      case 'PAID':
+        return { label: 'Đã thanh toán', bg: Colors.successLight, color: Colors.success };
+      case 'PENDING':
+        return { label: 'Chờ xử lý', bg: Colors.warningLight, color: Colors.warning };
+      case 'FAILED':
+        return { label: 'Thất bại', bg: Colors.errorLight, color: Colors.error };
+      case 'CANCELLED':
+        return { label: 'Đã hủy', bg: Colors.disabled, color: Colors.secondaryText };
       case 'ACTIVE':
       case 'AVAILABLE':
         return {
@@ -26,8 +34,8 @@ export const VoucherStatusBadge: React.FC<VoucherStatusBadgeProps> = ({
       case 'REDEEMED':
         return {
           label: 'Đã dùng',
-          bg: '#EBF3FE',
-          color: '#2563EB',
+          bg: Colors.primaryLight,
+          color: Colors.primary,
         };
       case 'EXPIRED':
       case 'ENDED':
@@ -94,7 +102,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     ...Typography.badge,
-    fontSize: 10,
+    fontSize: 12,
   },
   badgeTextMd: {
     fontSize: 12,

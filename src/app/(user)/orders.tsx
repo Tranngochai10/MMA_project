@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/common/ScreenContainer';
 import { AppHeader } from '../../components/common/AppHeader';
@@ -20,7 +20,8 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 type TabOption = 'ALL' | OrderStatus;
 
 export default function OrdersScreen() {
-  const { orders } = useApp();
+  const { orders, refreshAccountData } = useApp();
+  useFocusEffect(useCallback(() => { void refreshAccountData(); }, [refreshAccountData]));
   const [activeTab, setActiveTab] = useState<TabOption>('ALL');
 
   const tabs: { id: TabOption; label: string }[] = [
@@ -101,7 +102,7 @@ export default function OrdersScreen() {
               >
                 <View style={styles.cardTop}>
                   <View style={styles.orderIdCol}>
-                    <Text style={styles.orderId}>{order.id}</Text>
+                    <Text selectable style={styles.orderId}>{order.id}</Text>
                     <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
@@ -166,8 +167,8 @@ const styles = StyleSheet.create({
   },
   tabChip: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.card,
+    paddingVertical: 10,
+    borderRadius: 10,
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -175,6 +176,7 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
+    minHeight: 44,
   },
   tabChipActive: {
     backgroundColor: Colors.primaryCoral,
@@ -194,8 +196,8 @@ const styles = StyleSheet.create({
   },
   orderCard: {
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.card,
-    padding: Spacing.base,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: Spacing.md,
@@ -209,8 +211,9 @@ const styles = StyleSheet.create({
   orderIdCol: {},
   orderId: {
     ...Typography.bodySmall,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.primaryText,
+    fontSize: 13,
   },
   orderDate: {
     ...Typography.caption,
@@ -249,6 +252,8 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     fontWeight: '600',
     color: Colors.primaryText,
+    fontSize: 16,
+    lineHeight: 23,
   },
   orderAmount: {
     ...Typography.h4,

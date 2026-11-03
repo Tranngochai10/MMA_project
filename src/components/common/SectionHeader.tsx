@@ -14,7 +14,7 @@ interface SectionHeaderProps {
 export const SectionHeader: React.FC<SectionHeaderProps> = ({
   title,
   subtitle,
-  actionText = 'See All',
+  actionText = 'Xem tất cả',
   onAction,
   style,
 }) => {
@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
     ...Typography.h3,
     fontSize: 18,
     color: Colors.primaryText,
+    fontWeight: '600',
   },
   subtitle: {
     ...Typography.bodySmall,
@@ -70,6 +71,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
     paddingLeft: Spacing.sm,
+    minHeight: 44,
   },
   actionText: {
     fontSize: 13,

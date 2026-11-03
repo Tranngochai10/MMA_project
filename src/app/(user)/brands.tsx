@@ -12,8 +12,8 @@ import { AppHeader } from '../../components/common/AppHeader';
 import { SearchBar } from '../../components/common/SearchBar';
 import { BrandCard } from '../../components/brand/BrandCard';
 import { EmptyState } from '../../components/common/EmptyState';
-import { CATEGORIES } from '../../constants/categories';
-import { BorderRadius, Colors, Spacing, Typography } from '../../constants/theme';
+import { categoryChoices } from '../../utils/categoryChoices';
+import { Colors, Spacing, Typography } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 import { VoucherCategory } from '../../types';
 
@@ -64,7 +64,7 @@ export default function BrandsScreen() {
           contentContainerStyle={styles.categoryScroll}
           style={{ flexGrow: 0 }}
         >
-          {CATEGORIES.map((cat) => (
+          {categoryChoices(brands.map(brand => brand.category)).map((cat) => (
             <TouchableOpacity
               key={cat.id}
               activeOpacity={0.7}
@@ -129,13 +129,15 @@ const styles = StyleSheet.create({
   categoryChip: {
     paddingHorizontal: 16,
     height: 36,
-    borderRadius: BorderRadius.card,
+    borderRadius: 10,
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
     marginRight: Spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
+    minHeight: 44,
+    paddingVertical: 10,
   },
   categoryChipActive: {
     backgroundColor: Colors.primaryCoral,

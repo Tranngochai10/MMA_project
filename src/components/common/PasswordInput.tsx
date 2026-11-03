@@ -16,6 +16,8 @@ export const PasswordInput: React.FC<Omit<FormInputProps, 'rightIcon' | 'secureT
       leftIcon="lock-closed-outline"
       rightIcon={
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
           onPress={() => setShowPassword((prev) => !prev)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >

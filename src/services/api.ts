@@ -1,5 +1,8 @@
-import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import { create, AxiosError, AxiosRequestConfig } from "axios";
 import { endpoints } from "./endpoints";
+import { Platform } from "react-native";
+import { appendImage, brandFormData, CreateBrandInput } from "./brandUpload";
+import type { ImagePickerAsset } from "expo-image-picker";
 import { mapBrand, mapVoucher, mapWalletVoucher } from "./apiMappers";
 import {
   ApiUser,
@@ -10,13 +13,26 @@ import {
   ManagerStatsDto,
   NotificationDto,
   OrderDto,
-  PurchaseDto,
   VoucherDto,
   VoucherPageDto,
   WalletVoucherDto,
 } from "./apiTypes";
 export { mapBrand, mapUser, mapVoucher, mapWalletVoucher } from "./apiMappers";
 
+export interface TransferOrder {
+  id: string;
+  orderCode: string;
+  voucherId: string;
+  status: string;
+  amount: number;
+  currency: "VND";
+  paymentReference: string;
+  bankDetails: { accountNumber: string; accountName: string; bankBin: string };
+  expiresAt: string;
+  canPay: boolean;
+  walletVoucherId?: string;
+  qrImage: string | null;
+}
 const baseURL = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, "");
 const DEFAULT_TIMEOUT_MS = 15000;
 
@@ -36,7 +52,7 @@ export class ApiError extends Error {
   }
 }
 
-export const http = axios.create({
+export const http = create({
   baseURL,
   headers: { Accept: "application/json", "Content-Type": "application/json" },
   timeout: DEFAULT_TIMEOUT_MS,
@@ -133,6 +149,52 @@ async function requestData<T>(config: AxiosRequestConfig): Promise<T> {
 }
 
 export const api = {
+  createTransferOrder: (voucherId: string, requestKey: string) =>
+    requestData<TransferOrder>({
+      method: "POST",
+      url: "/api/payments/mb",
+      headers: { "Idempotency-Key": requestKey },
+      data: { voucherId },
+    }),
+  transferOrder: (id: string) =>
+    requestData<TransferOrder>({
+      method: "GET",
+      url: `/api/payments/mb/${id}`,
+    }),
+  confirmTransfer: (
+    id: string,
+    bankTransactionId: string,
+    receivedAmount: number,
+  ) =>
+    requestData<TransferOrder>({
+      method: "POST",
+      url: `/api/payments/mb/${id}/confirm`,
+      data: { bankTransactionId, receivedAmount },
+    }),
+  cancelTransfer: (id: string) =>
+    requestData<{ status: string }>({
+      method: "POST",
+      url: `/api/payments/mb/${id}/cancel`,
+    }),
+  voucherQr: (id: string) =>
+    requestData<{ qrImage: string; expiresAt: string }>({
+      method: "GET",
+      url: `/api/user-vouchers/${id}/qr`,
+    }),
+  uploadImage: async (asset: ImagePickerAsset) => {
+    const data = new FormData();
+    await appendImage(data, "image", asset);
+    return requestData<{ url: string }>({
+      method: "POST",
+      url: "/api/media",
+      data,
+      headers: {
+        "Content-Type":
+          Platform.OS === "web" ? undefined : "multipart/form-data",
+      },
+      timeout: 60000,
+    });
+  },
   login: (email: string, password: string) =>
     requestData<AuthResponse>({
       method: "POST",
@@ -163,7 +225,7 @@ export const api = {
       data,
     }),
   forgotPassword: (email: string) =>
-    requestData<{ email: string; mockOtp?: string; expiresIn?: string }>({
+    requestData<{ email: string; expiresIn?: string }>({
       method: "POST",
       url: endpoints.auth.forgotPassword,
       data: { email },
@@ -203,8 +265,22 @@ export const api = {
     });
     return { ...result, vouchers: result.vouchers.map(mapVoucher) };
   },
-  vouchers: async (params?: Record<string, string | number | undefined>) =>
-    (await api.voucherPage(params)).vouchers,
+  vouchers: async (params?: Record<string, string | number | undefined>) => {
+    if (params?.page || params?.recommended)
+      return (await api.voucherPage(params)).vouchers;
+    // Load all pages for the catalog filters.
+    const first = await api.voucherPage({ ...params, page: 1, limit: 100 });
+    const all = [...first.vouchers];
+    const pages = Math.ceil(first.total / 100);
+    for (let page = 2; page <= pages; page += 1) {
+      all.push(
+        ...(await api.voucherPage({ ...params, page, limit: 100 })).vouchers,
+      );
+    }
+    return Array.from(
+      new Map(all.map((voucher) => [voucher.id, voucher])).values(),
+    );
+  },
   voucher: async (id: string) =>
     mapVoucher(
       await requestData<VoucherDto>({
@@ -248,12 +324,6 @@ export const api = {
       method: "POST",
       url: endpoints.favorites.voucherToggle(id),
     }),
-  buyVoucher: (id: string, paymentMethod: string) =>
-    requestData<PurchaseDto>({
-      method: "POST",
-      url: endpoints.buyVoucher(id),
-      data: { paymentMethod },
-    }),
   walletVoucher: async (id: string) =>
     (
       await requestData<WalletVoucherDto[]>({
@@ -264,11 +334,6 @@ export const api = {
     )
       .map(mapWalletVoucher)
       .find((item) => item.id === id),
-  useVoucher: (id: string) =>
-    requestData<WalletVoucherDto>({
-      method: "PATCH",
-      url: endpoints.useVoucher(id),
-    }),
   orders: (params?: Record<string, string | number | undefined>) =>
     requestData<OrderDto[]>({ method: "GET", url: endpoints.orders, params }),
   order: (id: string) =>
@@ -301,8 +366,30 @@ export const api = {
         url: endpoints.manager.brands,
       })
     ).map(mapBrand),
-  createManagerBrand: async (data: { name: string; code: string; categoryId?: string; rating: number; logo_url: string; cover_image_url: string; description: string }) =>
-    mapBrand(await requestData<BrandDto>({ method: "POST", url: endpoints.manager.brands, data })),
+  createManagerBrand: async (data: CreateBrandInput) =>
+    mapBrand(
+      await requestData<BrandDto>({
+        method: "POST",
+        url: endpoints.manager.brands,
+        data: await brandFormData(data),
+        headers: {
+          "Content-Type":
+            Platform.OS === "web" ? undefined : "multipart/form-data",
+        },
+        timeout: 60000,
+      }),
+    ),
+  updateBrandPresence: async (
+    id: string,
+    data: { salesChannel: "STORE" | "ONLINE"; websiteUrl: string },
+  ) =>
+    mapBrand(
+      await requestData<BrandDto>({
+        method: "PUT",
+        url: `${endpoints.manager.brands}/${id}`,
+        data,
+      }),
+    ),
   managerVouchers: async (
     params?: Record<string, string | number | undefined>,
   ) => {

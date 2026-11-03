@@ -1,15 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Stack, router, useSegments } from 'expo-router';
-import { useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 
 export default function ManagerLayout() {
-  const { isLoggedIn, role } = useApp();
+  const { isLoggedIn, role, authReady } = useApp();
   const segments = useSegments();
   useEffect(() => {
-    if (!isLoggedIn || role !== 'MANAGER') router.replace('/login');
-  }, [isLoggedIn, role, segments]);
-  if (!isLoggedIn || role !== 'MANAGER') return null;
+    if (authReady && (!isLoggedIn || role !== 'MANAGER')) router.replace('/login');
+  }, [authReady, isLoggedIn, role, segments]);
+  if (!authReady || !isLoggedIn || role !== 'MANAGER') return null;
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

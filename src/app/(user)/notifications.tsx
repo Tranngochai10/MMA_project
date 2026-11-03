@@ -31,7 +31,7 @@ export default function NotificationsScreen() {
       case 'EXPIRATION_REMINDER':
         return { name: 'alarm' as const, color: Colors.warning, bg: Colors.warningLight };
       case 'REDEMPTION_CONFIRMED':
-        return { name: 'checkmark-done' as const, color: '#2563EB', bg: '#EFF6FF' };
+        return { name: 'checkmark-done' as const, color: Colors.primary, bg: '#EFF6FF' };
       default:
         return { name: 'notifications' as const, color: Colors.primaryCoral, bg: Colors.lightPeach };
     }
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: BorderRadius.card,
     borderWidth: 1,
-    borderColor: '#FFDDC4',
+    borderColor: Colors.border,
   },
   markAllText: {
     ...Typography.caption,
@@ -139,13 +139,13 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   notifCardUnread: {
-    borderColor: '#FFDDC4',
+    borderColor: Colors.border,
     backgroundColor: '#FFFDFB',
   },
   iconWrapper: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   timeText: {
     ...Typography.caption,
-    fontSize: 10,
+    fontSize: 12,
     color: Colors.tertiaryText,
   },
   message: {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,19 +6,20 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ScreenContainer } from '../../../components/common/ScreenContainer';
 import { AppHeader } from '../../../components/common/AppHeader';
 import { WalletVoucherCard } from '../../../components/voucher/WalletVoucherCard';
 import { EmptyState } from '../../../components/common/EmptyState';
-import { BorderRadius, Colors, Spacing, Typography } from '../../../constants/theme';
+import { Colors, Spacing, Typography } from '../../../constants/theme';
 import { useApp } from '../../../context/AppContext';
 import { WalletVoucherStatus } from '../../../types';
 
 type WalletTab = 'ALL' | WalletVoucherStatus;
 
 export default function WalletScreen() {
-  const { walletVouchers } = useApp();
+  const { walletVouchers, refreshAccountData } = useApp();
+  useFocusEffect(useCallback(() => { void refreshAccountData(); }, [refreshAccountData]));
   const [activeTab, setActiveTab] = useState<WalletTab>('ALL');
 
   const tabs: { id: WalletTab; label: string; count: number }[] = [
@@ -136,14 +137,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.card,
+    paddingVertical: 10,
+    borderRadius: 10,
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
     marginRight: Spacing.sm,
     height: 38,
     justifyContent: 'center',
+    minHeight: 44,
   },
   tabChipActive: {
     backgroundColor: Colors.primaryCoral,
@@ -170,7 +172,7 @@ const styles = StyleSheet.create({
   },
   countText: {
     ...Typography.caption,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: Colors.secondaryText,
   },

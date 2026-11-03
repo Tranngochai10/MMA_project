@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,8 +12,7 @@ import { AppHeader } from '../../../components/common/AppHeader';
 import { BrandLogo } from '../../../components/brand/BrandLogo';
 import { VoucherStatusBadge } from '../../../components/voucher/VoucherStatusBadge';
 import { PrimaryButton } from '../../../components/common/PrimaryButton';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
-import { SuccessModal } from '../../../components/common/SuccessModal';
+import { VoucherQrModal } from '../../../components/common/VoucherQrModal';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../../constants/theme';
 import { useApp } from '../../../context/AppContext';
@@ -24,13 +21,9 @@ import { formatCurrency, formatDate } from '../../../utils/formatters';
 export default function WalletVoucherDetailScreen() {
   const { id } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const { getWalletVoucherById, redeemWalletVoucher } = useApp();
+  const { getWalletVoucherById } = useApp();
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [redeemedTimestamp, setRedeemedTimestamp] = useState<string | null>(null);
-
   const voucher = getWalletVoucherById(id as string);
 
   if (!voucher) {
@@ -41,7 +34,7 @@ export default function WalletVoucherDetailScreen() {
           title="Không tìm thấy voucher"
           message="Không thể tìm thấy voucher trong ví điện tử của bạn."
           actionLabel="Quay lại ví"
-          onAction={() => router.back()}
+          onAction={() => router.replace('/(user)/(tabs)/wallet')}
         />
       </ScreenContainer>
     );
@@ -49,24 +42,6 @@ export default function WalletVoucherDetailScreen() {
 
   const isAvailable = voucher.status === 'AVAILABLE';
   const isRedeemed = voucher.status === 'REDEEMED';
-
-  const handleCopyCode = () => {
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
-
-  const handleConfirmUse = async () => {
-    setShowConfirmModal(false);
-    try {
-      const result = await redeemWalletVoucher(voucher.id);
-      if (result.success) {
-        setRedeemedTimestamp(result.redeemedDate);
-        setShowSuccessModal(true);
-      }
-    } catch (error) {
-      Alert.alert('Không thể sử dụng voucher', error instanceof Error ? error.message : 'Voucher vẫn chưa được sử dụng. Vui lòng thử lại.');
-    }
-  };
 
   return (
     <View style={styles.outerContainer}>
@@ -93,27 +68,9 @@ export default function WalletVoucherDetailScreen() {
             {/* Voucher Code Passcode Box */}
             <View style={styles.codeBox}>
               <Text style={styles.codeBoxLabel}>Mã đổi ưu đãi</Text>
-              <Text style={styles.codeText}>{voucher.voucherCode}</Text>
+              <Text selectable style={styles.codeText}>{voucher.voucherCode}</Text>
 
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={handleCopyCode}
-                style={styles.copyBtn}
-              >
-                <Ionicons
-                  name={copiedCode ? 'checkmark-circle' : 'copy-outline'}
-                  size={16}
-                  color={copiedCode ? Colors.success : Colors.primaryCoral}
-                />
-                <Text
-                  style={[
-                    styles.copyBtnText,
-                    copiedCode ? { color: Colors.success } : null,
-                  ]}
-                >
-                  {copiedCode ? 'Đã sao chép mã' : 'Sao chép mã'}
-                </Text>
-              </TouchableOpacity>
+
             </View>
 
             {/* Ticket Tear Perforation */}
@@ -143,11 +100,11 @@ export default function WalletVoucherDetailScreen() {
             {isRedeemed && (
               <View style={styles.redemptionHistoryBox}>
                 <View style={styles.historyHeader}>
-                  <Ionicons name="checkmark-done-circle" size={18} color="#2563EB" />
+                  <Ionicons name="checkmark-done-circle" size={18} color={Colors.primary} />
                   <Text style={styles.historyTitle}>Lịch sử đổi mã</Text>
                 </View>
                 <Text style={styles.historyText}>
-                  • Đã đổi thành công lúc: {voucher.redeemedDate || redeemedTimestamp || 'Vừa xong'}
+                  • Đã đổi thành công lúc: {voucher.redeemedDate || 'Vừa xong'}
                 </Text>
                 <Text style={styles.historySub}>
                   Đã ghi nhận trong hệ thống đối soát của Quản lý cửa hàng.
@@ -171,7 +128,7 @@ export default function WalletVoucherDetailScreen() {
           <View style={styles.disclaimerBox}>
             <Ionicons name="information-circle" size={18} color={Colors.primaryCoral} />
             <Text style={styles.disclaimerText}>
-              Đưa mã này cho nhân viên thu ngân hoặc nhập mã vào trang thanh toán trực tuyến của thương hiệu để nhận ưu đãi.
+              Hiển thị QR cho quản lý quét và xác nhận. Voucher chỉ được ghi nhận đã dùng sau bước xác nhận.
             </Text>
           </View>
         </View>
@@ -181,7 +138,7 @@ export default function WalletVoucherDetailScreen() {
       <View style={[styles.fixedBottom, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         {isAvailable ? (
           <PrimaryButton
-            title="Sử dụng voucher"
+            title="Hiển thị QR sử dụng"
             onPress={() => setShowConfirmModal(true)}
             icon={<Ionicons name="scan-outline" size={18} color={Colors.white} />}
           />
@@ -202,28 +159,7 @@ export default function WalletVoucherDetailScreen() {
         )}
       </View>
 
-      {/* Confirmation Dialog before redemption */}
-      <ConfirmDialog
-        visible={showConfirmModal}
-        title="Xác nhận sử dụng voucher?"
-        message={`Bạn có chắc chắn muốn sử dụng "${voucher.title}"? Thao tác này sẽ chuyển thẻ sang trạng thái ĐÃ DÙNG.`}
-        confirmLabel="Xác nhận dùng"
-        cancelLabel="Hủy"
-        icon="checkmark-circle-outline"
-        disclaimer="Thao tác này sẽ xác nhận đổi mã voucher ngay lập tức."
-        onConfirm={handleConfirmUse}
-        onCancel={() => setShowConfirmModal(false)}
-      />
-
-      {/* Success Modal after redemption */}
-      <SuccessModal
-        visible={showSuccessModal}
-        title="Đổi mã thành công! 🎉"
-        message={`Thẻ ${voucher.brandName} (${voucher.voucherCode}) của bạn đã được đổi thành công.`}
-        subMessage="Trạng thái đã được chuyển sang ĐÃ DÙNG và đồng bộ trên hệ thống đối soát cửa hàng."
-        buttonLabel="Hoàn tất"
-        onClose={() => setShowSuccessModal(false)}
-      />
+      {showConfirmModal && <VoucherQrModal id={voucher.id} onClose={() => setShowConfirmModal(false)} />}
     </View>
   );
 }
@@ -242,8 +178,8 @@ const styles = StyleSheet.create({
   },
   ticketCard: {
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.card,
-    padding: Spacing.base,
+    borderRadius: 14,
+    padding: 20,
     borderWidth: 1,
     borderColor: Colors.border,
     ...Shadows.card,
@@ -254,6 +190,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
   },
   brandRow: {
     flexDirection: 'row',
@@ -276,19 +214,20 @@ const styles = StyleSheet.create({
   },
   voucherTitle: {
     ...Typography.h3,
-    fontSize: 17,
+    fontSize: 22,
     color: Colors.primaryText,
     marginTop: Spacing.md,
-    lineHeight: 22,
+    lineHeight: 30,
+    fontWeight: '700',
   },
   codeBox: {
-    backgroundColor: Colors.warmCream,
-    borderRadius: BorderRadius.card,
-    padding: Spacing.base,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 12,
+    padding: 20,
     alignItems: 'center',
     marginVertical: Spacing.base,
-    borderWidth: 1.5,
-    borderColor: '#FFDDC4',
+    borderWidth: 1,
+    borderColor: Colors.border,
     borderStyle: 'dashed',
   },
   codeBoxLabel: {
@@ -299,11 +238,13 @@ const styles = StyleSheet.create({
   },
   codeText: {
     ...Typography.h1,
-    fontSize: 24,
+    fontSize: 20,
     color: Colors.primaryCoral,
-    fontWeight: '900',
-    letterSpacing: 2,
+    fontWeight: '800',
+    letterSpacing: 1,
     marginVertical: Spacing.xs,
+    fontFamily: 'monospace',
+    lineHeight: 28,
   },
   copyBtn: {
     flexDirection: 'row',
@@ -350,13 +291,15 @@ const styles = StyleSheet.create({
   datesGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
   },
   dateCol: {
     alignItems: 'center',
   },
   dateLabel: {
     ...Typography.caption,
-    fontSize: 10,
+    fontSize: 12,
     color: Colors.secondaryText,
   },
   dateValue: {
@@ -381,7 +324,7 @@ const styles = StyleSheet.create({
   historyTitle: {
     ...Typography.bodySmall,
     fontWeight: '700',
-    color: '#1E40AF',
+    color: Colors.primaryDark,
     marginLeft: 6,
   },
   historyText: {
@@ -392,13 +335,13 @@ const styles = StyleSheet.create({
   historySub: {
     ...Typography.caption,
     color: '#3B82F6',
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 2,
   },
   conditionsCard: {
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.card,
-    padding: Spacing.base,
+    borderRadius: 14,
+    padding: 20,
     borderWidth: 1,
     borderColor: Colors.border,
     marginTop: Spacing.md,
@@ -428,7 +371,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.card,
     borderWidth: 1,
-    borderColor: '#FFDDC4',
+    borderColor: Colors.border,
     marginTop: Spacing.md,
     marginBottom: Spacing.xl,
   },
@@ -437,7 +380,7 @@ const styles = StyleSheet.create({
     color: Colors.secondaryText,
     marginLeft: Spacing.sm,
     flex: 1,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   fixedBottom: {
     position: 'absolute',

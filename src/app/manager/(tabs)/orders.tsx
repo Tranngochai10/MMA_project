@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { VoucherStatusBadge } from '../../../components/voucher/VoucherStatusBadge';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View,
   Text,
@@ -10,14 +12,15 @@ import { ScreenContainer } from '../../../components/common/ScreenContainer';
 import { AppHeader } from '../../../components/common/AppHeader';
 import { SearchBar } from '../../../components/common/SearchBar';
 import { EmptyState } from '../../../components/common/EmptyState';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
+import { OrderPaymentModal } from '../../../components/manager/OrderPaymentModal';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../../constants/theme';
 import { useApp } from '../../../context/AppContext';
 import { Order } from '../../../types';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 
 export default function ManagerOrdersScreen() {
-  const { managerRecentOrders: orders } = useApp();
+  const { managerRecentOrders: orders, refreshAccountData } = useApp();
+  useFocusEffect(useCallback(() => { void refreshAccountData(); }, [refreshAccountData]));
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -101,33 +104,11 @@ export default function ManagerOrdersScreen() {
               style={styles.orderCard}
             >
               <View style={styles.orderHeader}>
-                <View>
-                  <Text style={styles.orderId}>{ord.id}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text selectable numberOfLines={1} style={styles.orderId}>{ord.id}</Text>
                   <Text style={styles.orderDate}>{formatDate(ord.createdAt)}</Text>
                 </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    ord.status === 'PAID'
-                      ? styles.statusPaid
-                      : styles.statusOther,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusBadgeText,
-                      ord.status === 'PAID'
-                        ? { color: Colors.success }
-                        : { color: Colors.secondaryText },
-                    ]}
-                  >
-                    {ord.status === 'PAID'
-                      ? 'ĐÃ THANH TOÁN'
-                      : ord.status === 'PENDING'
-                      ? 'CHỜ XỬ LÝ'
-                      : 'ĐÃ HỦY'}
-                  </Text>
-                </View>
+                <VoucherStatusBadge status={ord.status} />
               </View>
 
               <View style={styles.divider} />
@@ -153,20 +134,7 @@ export default function ManagerOrdersScreen() {
 
       {/* Order Inspection Dialog */}
       {inspectedOrder && (
-        <ConfirmDialog
-          visible={true}
-          title={`Chi tiết Đơn hàng ${inspectedOrder.id}`}
-          message={`Voucher: ${inspectedOrder.voucherTitle}\n\nSố tiền: ${formatCurrency(
-            inspectedOrder.amount
-          )}\nThanh toán: ${inspectedOrder.paymentMethod}\nTrạng thái: ${
-            inspectedOrder.status === 'PAID' ? 'Đã thanh toán' : inspectedOrder.status
-          }\nNgày tạo: ${formatDate(inspectedOrder.createdAt)}`}
-          confirmLabel="Đóng"
-          cancelLabel="OK"
-          icon="receipt-outline"
-          onConfirm={() => setInspectedOrder(null)}
-          onCancel={() => setInspectedOrder(null)}
-        />
+        <OrderPaymentModal order={inspectedOrder} onClose={() => setInspectedOrder(null)} />
       )}
     </ScreenContainer>
   );
@@ -185,13 +153,15 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 16,
     height: 36,
-    borderRadius: BorderRadius.card,
+    borderRadius: 10,
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
     marginRight: Spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
+    minHeight: 44,
+    paddingVertical: 10,
   },
   chipActive: {
     backgroundColor: Colors.primaryCoral,
@@ -211,8 +181,8 @@ const styles = StyleSheet.create({
   },
   orderCard: {
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.card,
-    padding: Spacing.base,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: Spacing.md,
@@ -222,11 +192,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
   },
   orderId: {
     ...Typography.bodySmall,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.primaryText,
+    fontSize: 13,
   },
   orderDate: {
     ...Typography.caption,
@@ -257,6 +230,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
   },
   texts: {
     flex: 1,
@@ -273,6 +248,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.primaryText,
     marginTop: 2,
+    fontSize: 16,
+    lineHeight: 23,
   },
   paymentMethod: {
     ...Typography.caption,

@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,12 +8,6 @@ import { PrimaryButton } from '../components/common/PrimaryButton';
 import { SecondaryButton } from '../components/common/SecondaryButton';
 
 export default function SplashScreen() {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // Auto-transition preview, or user can tap buttons
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -33,10 +27,7 @@ export default function SplashScreen() {
           Voucher thương hiệu & Sàn ưu đãi độc quyền
         </Text>
 
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="small" color={Colors.primaryCoral} />
-          <Text style={styles.loadingText}>Đang chuẩn bị sàn ưu đãi...</Text>
-        </View>
+
       </View>
 
       {/* Quick Launch Actions */}
@@ -47,8 +38,8 @@ export default function SplashScreen() {
           style={styles.button}
         />
         <SecondaryButton
-          title="Cổng chọn vai trò (Demo)"
-          onPress={() => router.replace('/role-preview')}
+          title="Đăng nhập"
+          onPress={() => router.replace('/login')}
           style={[styles.button, { marginTop: Spacing.sm }]}
         />
       </View>

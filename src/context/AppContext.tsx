@@ -1,3 +1,5 @@
+import { mapOrder } from '../services/orderMapper';
+import type { CreateBrandInput } from '../services/brandUpload';
 import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { Alert, View, Text, StyleSheet } from 'react-native';
 import {
@@ -16,22 +18,23 @@ import { api, mapUser, setAuthToken, setUnauthorizedHandler } from '../services/
 import { readAuthToken, removeAuthToken, saveAuthToken } from '../services/tokenStorage';
 
 const EMPTY_USER: UserProfile = { id: '', name: '', email: '', phone: '', avatarUrl: '', role: 'USER' };
-const EMPTY_STATS: ManagerStats = { activeVouchers: 0, totalOrders: 0, issuedVouchers: 0, simulatedRedemptions: 0, totalRevenue: 0 };
-const toOrder = (item: import('../services/apiTypes').OrderDto): Order => ({ id: item.orderCode || item.id || item._id || '', voucherId: item.voucherId || '', voucherTitle: item.voucherTitle || 'Voucher', brandName: item.brandName || '', brandLogo: item.brandLogo || '', amount: Number(item.amount || 0), paymentMethod: item.paymentMethod || '', status: (item.status || 'PAID') as Order['status'], createdAt: item.createdAt || new Date().toISOString(), walletVoucherId: item.walletVoucherId || undefined });
+const EMPTY_STATS: ManagerStats = { activeVouchers: 0, totalOrders: 0, issuedVouchers: 0, redeemedVouchers: 0, totalRevenue: 0 };
+const toOrder = mapOrder;
 
 interface AppContextType {
+  refreshAccountData: () => Promise<void>;
   notify: (message: string, kind?: 'success' | 'error' | 'info') => void;
   role: UserRole;
-  setRole: (role: UserRole) => void;
   currentUser: UserProfile;
   isLoggedIn: boolean;
   authReady: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<UserRole>;
   register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (data: Partial<UserProfile>) => void;
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 
   brands: Brand[];
+  updateBrandPresence: (id: string, data: { salesChannel: 'STORE' | 'ONLINE'; websiteUrl: string }) => Promise<void>;
   vouchers: Voucher[];
   toggleFavoriteBrand: (brandId: string) => void;
   toggleFavoriteVoucher: (voucherId: string) => void;
@@ -40,11 +43,9 @@ interface AppContextType {
 
   orders: Order[];
   getOrderById: (id: string) => Order | undefined;
-  createOrder: (voucherId: string, paymentMethod: string) => Promise<{ order: Order; walletVoucher: WalletVoucher }>;
 
   walletVouchers: WalletVoucher[];
   getWalletVoucherById: (id: string) => WalletVoucher | undefined;
-  redeemWalletVoucher: (walletVoucherId: string) => Promise<{ success: boolean; redeemedDate: string }>;
 
   managerStats: ManagerStats;
   managerRedemptions: ManagerRedemption[];
@@ -52,7 +53,7 @@ interface AppContextType {
   managerRecentOrders: Order[];
   preferredVoucherBrandId: string;
   setPreferredVoucherBrandId: (id: string) => void;
-  createManagerBrand: (data: { name: string; code: string; categoryId?: string; rating: number; logo_url: string; cover_image_url: string; description: string }) => Promise<Brand>;
+  createManagerBrand: (data: CreateBrandInput) => Promise<Brand>;
   verifyVoucherCode: (code: string) => Promise<Record<string, unknown>>;
   redeemVoucherCode: (code: string) => Promise<Record<string, unknown>>;
   createVoucher: (voucherData: Omit<Voucher, 'id' | 'availableQuantity'>) => Promise<Voucher>;
@@ -90,11 +91,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [managerVoucherList, setManagerVoucherList] = useState<Voucher[]>([]);
   const [managerRecentOrders, setManagerRecentOrders] = useState<Order[]>([]);
   const [preferredVoucherBrandId, setPreferredVoucherBrandId] = useState('');
-
-  const switchRole = (newRole: UserRole) => {
-    setRole(newRole);
-    if (currentUser.role !== newRole) setRole(currentUser.role);
-  };
 
   const loadAuthenticatedData = useCallback(async (activeRole: UserRole, assignedBrandId?: string) => {
     if (activeRole === 'MANAGER') {
@@ -143,6 +139,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (results[6].status === 'fulfilled') setNotifications(results[6].value.notifications.map((n) => ({ id: n.id || n._id || '', type: (n.type || 'PROMO') as NotificationItem['type'], title: n.title || '', message: n.message || '', createdAt: n.timestamp || n.createdAt || '', isRead: Boolean(n.isRead), actionUrl: n.actionUrl || undefined }))); else errors.push(results[6].reason.message);
     if (errors.length) Alert.alert('Một số dữ liệu tài khoản chưa tải được', errors.join('\n'));
   }, []);
+
+  const refreshAccountData = useCallback(async () => {
+    if (isLoggedIn) await loadAuthenticatedData(currentUser.role, currentUser.assignedBrandId);
+  }, [isLoggedIn, loadAuthenticatedData, currentUser.role, currentUser.assignedBrandId]);
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
@@ -289,90 +289,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getOrderById = (id: string) => orders.find((o) => o.id === id);
   const getWalletVoucherById = (id: string) => walletVouchers.find((w) => w.id === id);
 
-  const createOrder = async (voucherId: string, paymentMethod: string) => {
-    let voucher = vouchers.find((v) => v.id === voucherId);
-    if (!voucher) {
-      voucher = await api.voucher(voucherId);
-      setVouchers((prev) => prev.some((item) => item.id === voucherId) ? prev : [voucher!, ...prev]);
-    }
-    const purchase = await api.buyVoucher(voucherId, paymentMethod);
-    const walletVoucherId = String(purchase.walletVoucherId);
-
-    const newWalletVoucher: WalletVoucher = {
-      id: walletVoucherId,
-      voucherId: voucher.id,
-      brandName: purchase.brandName || voucher.brandName,
-      brandLogo: purchase.brandLogo || voucher.brandLogo,
-      title: purchase.voucherTitle || voucher.title,
-      discountDisplay: voucher.discountDisplay,
-      voucherCode: purchase.voucherCode,
-      purchasedDate: purchase.purchasedDate || new Date().toISOString(),
-      expirationDate: purchase.expirationDate || voucher.expirationDate,
-      status: 'AVAILABLE',
-      usageConditions: voucher.usageConditions,
-      sellingPrice: purchase.totalAmount ?? voucher.sellingPrice,
-      originalValue: voucher.originalValue,
-      coverImage: voucher.coverImage,
-    };
-
-    const newOrder: Order = {
-      id: purchase.orderCode,
-      voucherId: voucher.id,
-      voucherTitle: purchase.voucherTitle || voucher.title,
-      brandName: purchase.brandName || voucher.brandName,
-      brandLogo: purchase.brandLogo || voucher.brandLogo,
-      amount: purchase.totalAmount ?? voucher.sellingPrice,
-      paymentMethod: purchase.paymentMethod || paymentMethod,
-      status: 'PAID',
-      createdAt: new Date().toISOString(),
-      walletVoucherId,
-    };
-
-    setOrders((prev) => [newOrder, ...prev]);
-    setWalletVouchers((prev) => [newWalletVoucher, ...prev]);
-    notify('Mua voucher thành công. Voucher đã được thêm vào ví.');
-
-    // Decrement available quantity
-    setVouchers((prev) =>
-      prev.map((v) =>
-        v.id === voucherId
-          ? { ...v, availableQuantity: Math.max(0, v.availableQuantity - 1) }
-          : v
-      )
-    );
-
-    return { order: newOrder, walletVoucher: newWalletVoucher };
-  };
-
-  const redeemWalletVoucher = async (walletVoucherId: string) => {
-    const result = await api.useVoucher(walletVoucherId);
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-      now.getDate()
-    ).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    let redeemedItem: WalletVoucher | undefined;
-
-    setWalletVouchers((prev) =>
-      prev.map((item) => {
-        if (item.id === walletVoucherId) {
-          redeemedItem = {
-            ...item,
-            status: 'REDEEMED',
-            redeemedDate: result.usedAt || formattedDate,
-          };
-          return redeemedItem;
-        }
-        return item;
-      })
-    );
-
-    if (redeemedItem) setWalletVouchers((prev) => prev.map((item) => item.id === walletVoucherId ? redeemedItem! : item));
-    notify('Đổi voucher thành công.');
-
-    return { success: true, redeemedDate: result.usedAt || formattedDate };
-  };
-
   const createVoucher = async (voucherData: Omit<Voucher, 'id' | 'availableQuantity'>) => {
     const created = await api.createManagerVoucher({ brandId: voucherData.brandId || currentUser.assignedBrandId, categoryId: voucherData.categoryId, title: voucherData.title, description: voucherData.description, discountType: voucherData.discountType, discountValue: voucherData.discountValue, discountDisplay: voucherData.discountDisplay, sellingPrice: voucherData.sellingPrice, originalValue: voucherData.originalValue, totalQuantity: voucherData.totalQuantity, startDate: voucherData.startDate, expirationDate: voucherData.expirationDate, usageConditions: voucherData.usageConditions, coverImage: voucherData.coverImage, status: voucherData.status });
     setManagerVoucherList((prev) => [created, ...prev]);
@@ -381,8 +297,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateVoucher = async (voucherId: string, updates: Partial<Voucher>) => {
-    const updated = await api.updateManagerVoucher(voucherId, { title: updates.title, description: updates.description, sellingPrice: updates.sellingPrice, originalValue: updates.originalValue, totalQuantity: updates.totalQuantity, expirationDate: updates.expirationDate, usageConditions: updates.usageConditions });
+    const updated = await api.updateManagerVoucher(voucherId, { title: updates.title, description: updates.description, sellingPrice: updates.sellingPrice, originalValue: updates.originalValue, totalQuantity: updates.totalQuantity, expirationDate: updates.expirationDate, coverImage: updates.coverImage, usageConditions: updates.usageConditions });
     setManagerVoucherList((prev) => prev.map((item) => item.id === voucherId ? updated : item));
+    setVouchers((prev) => prev.map((item) => item.id === voucherId ? updated : item));
     notify('Đã cập nhật voucher.');
   };
 
@@ -393,7 +310,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const verifyVoucherCode = (code: string) => api.verifyRedemption(code);
-  const createManagerBrand = async (data: { name: string; code: string; categoryId?: string; rating: number; logo_url: string; cover_image_url: string; description: string }) => {
+  const updateBrandPresence = async (id: string, data: { salesChannel: 'STORE' | 'ONLINE'; websiteUrl: string }) => {
+    const updated = await api.updateBrandPresence(id, data);
+    setBrands(prev => prev.map(brand => brand.id === id ? { ...brand, salesChannel: updated.salesChannel, websiteUrl: updated.websiteUrl } : brand));
+    const update = (voucher: Voucher) => voucher.brandId === id ? { ...voucher, brandSalesChannel: data.salesChannel, brandWebsiteUrl: data.websiteUrl } : voucher;
+    setVouchers(prev => prev.map(update));
+    setManagerVoucherList(prev => prev.map(update));
+  };
+  const createManagerBrand = async (data: CreateBrandInput) => {
     const brand = await api.createManagerBrand(data);
     setBrands((prev) => [brand, ...prev.filter((item) => item.id !== brand.id)]);
     setPreferredVoucherBrandId(brand.id);
@@ -427,9 +351,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        refreshAccountData,
         notify,
         role,
-        setRole: switchRole,
         currentUser,
         isLoggedIn,
         authReady,
@@ -447,11 +371,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         orders,
         getOrderById,
-        createOrder,
 
         walletVouchers,
         getWalletVoucherById,
-        redeemWalletVoucher,
 
         managerStats,
         managerRedemptions,
@@ -460,6 +382,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         preferredVoucherBrandId,
         setPreferredVoucherBrandId,
         createManagerBrand,
+        updateBrandPresence,
         verifyVoucherCode,
         redeemVoucherCode,
         createVoucher,

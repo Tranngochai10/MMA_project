@@ -12,7 +12,7 @@ import { FormInput } from '../components/common/FormInput';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { PrimaryButton } from '../components/common/PrimaryButton';
 import { SuccessModal } from '../components/common/SuccessModal';
-import { BorderRadius, Colors, Spacing, Typography } from '../constants/theme';
+import { Colors, Spacing, Typography } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
 export default function RegisterScreen() {
@@ -219,7 +219,7 @@ export default function RegisterScreen() {
       {/* Success Modal */}
       <SuccessModal
         visible={showSuccessModal}
-        title="Tạo tài khoản thành công! 🎉"
+        title="Tạo tài khoản thành công! "
         message="Chào mừng bạn đến với Dealora. Tài khoản của bạn đã sẵn sàng để bắt đầu mua sắm ưu đãi."
         buttonLabel="Đến sàn ưu đãi"
         onClose={handleModalClose}
@@ -230,13 +230,17 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: 24,
     paddingVertical: Spacing.base,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+    paddingTop: 32,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.full,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -245,17 +249,24 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   header: {
-    marginBottom: Spacing.lg,
+    marginBottom: 28,
+    alignItems: 'flex-start',
   },
   title: {
     ...Typography.h1,
-    fontSize: 26,
+    fontSize: 28,
     color: Colors.primaryText,
+    lineHeight: 36,
+    fontWeight: '700',
+    textAlign: 'left',
   },
   subtitle: {
     ...Typography.body,
     color: Colors.secondaryText,
-    marginTop: 4,
+    marginTop: 8,
+    fontSize: 15,
+    lineHeight: 23,
+    textAlign: 'left',
   },
   form: {
     width: '100%',

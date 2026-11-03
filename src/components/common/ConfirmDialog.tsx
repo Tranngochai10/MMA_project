@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 60,
     height: 60,
-    borderRadius: 30,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.base,
@@ -134,6 +134,8 @@ const styles = StyleSheet.create({
     color: Colors.secondaryText,
     textAlign: 'center',
     marginBottom: Spacing.base,
+    fontSize: 15,
+    lineHeight: 24,
   },
   disclaimerContainer: {
     backgroundColor: Colors.warmCream,

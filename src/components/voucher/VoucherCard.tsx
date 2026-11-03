@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   ViewStyle,
 } from 'react-native';
@@ -13,6 +12,8 @@ import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../consta
 import { BrandLogo } from '../brand/BrandLogo';
 import { PriceDisplay } from './PriceDisplay';
 import { formatDate } from '../../utils/formatters';
+import { RemoteImage } from '../common/RemoteImage';
+import { VoucherStatusBadge } from './VoucherStatusBadge';
 
 interface VoucherCardProps {
   voucher: Voucher;
@@ -27,6 +28,8 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
   onFavoritePress,
   style,
 }) => {
+  const validSaving = Number.isFinite(voucher.originalValue) && voucher.originalValue > 0 && voucher.sellingPrice >= 0 && voucher.sellingPrice < voucher.originalValue;
+  const percent = validSaving ? Math.round((1 - voucher.sellingPrice / voucher.originalValue) * 100) : 0;
   return (
     <TouchableOpacity
       activeOpacity={0.88}
@@ -35,8 +38,8 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
     >
       {/* Top Banner Image with Overlay Logo & Favorite */}
       <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: voucher.coverImage }}
+        <RemoteImage
+          uri={voucher.coverImage}
           style={styles.coverImage}
         />
         <View style={styles.topRow}>
@@ -62,9 +65,9 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
         </View>
 
         {/* Discount Tag */}
-        <View style={styles.discountTag}>
-          <Text style={styles.discountTagText}>{voucher.discountDisplay}</Text>
-        </View>
+        {percent > 0 && <View style={styles.discountTag}>
+          <Text style={styles.discountTagText}>-{percent}%</Text>
+        </View>}
       </View>
 
       {/* Card Body */}
@@ -75,6 +78,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({
         <Text style={styles.title} numberOfLines={2}>
           {voucher.title}
         </Text>
+        <View style={{ marginTop: 8 }}><VoucherStatusBadge status={voucher.status} /></View>
 
         <View style={styles.metaRow}>
           <Ionicons name="time-outline" size={12} color={Colors.secondaryText} />
@@ -104,7 +108,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: '100%',
-    height: 110,
+    height: 120,
     backgroundColor: Colors.lightPeach,
     position: 'relative',
   },
@@ -126,8 +130,8 @@ const styles = StyleSheet.create({
     ...Shadows.soft,
   },
   favoriteButton: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: BorderRadius.full,
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
     alignItems: 'center',
@@ -145,7 +149,7 @@ const styles = StyleSheet.create({
   },
   discountTagText: {
     color: Colors.white,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   content: {
@@ -160,12 +164,12 @@ const styles = StyleSheet.create({
   },
   title: {
     ...Typography.body,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: Colors.primaryText,
     marginTop: 2,
-    lineHeight: 18,
-    minHeight: 36,
+    lineHeight: 21,
+    minHeight: 42,
   },
   metaRow: {
     flexDirection: 'row',
@@ -175,7 +179,7 @@ const styles = StyleSheet.create({
   expiryText: {
     ...Typography.caption,
     color: Colors.secondaryText,
-    fontSize: 11,
+    fontSize: 12,
     marginLeft: 4,
   },
   divider: {

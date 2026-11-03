@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { BorderRadius, Colors, Shadows, Spacing } from '../../constants/theme';
+import { Colors, Shadows, Spacing } from '../../constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface FloatingTabBarProps {
@@ -139,21 +139,23 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
-    paddingVertical: 8,
+    borderRadius: 16,
+    paddingVertical: 6,
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: Colors.border,
     ...Shadows.tabBar,
     justifyContent: 'space-around',
     width: '100%',
+    maxWidth: 1088,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 5,
-    borderRadius: BorderRadius.card,
+    borderRadius: 10,
+    minHeight: 48,
   },
   tabItemFocused: {
     backgroundColor: Colors.lightPeach,
@@ -166,7 +168,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.05 }],
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
     marginTop: 2,
     textAlign: 'center',

@@ -5,6 +5,8 @@ import {
   StyleSheet,
   ViewStyle,
   StyleProp,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,8 +34,11 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   return (
     <SafeAreaView edges={edges} style={[styles.safeArea, style]}>
       <StatusBar style="dark" />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}>
       {scrollable ? (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.scrollContent,
@@ -46,6 +51,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
       ) : (
         <View style={[styles.container, contentContainerStyle]}>{children}</View>
       )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -60,6 +66,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    width: '100%',
+    maxWidth: 1120,
+    alignSelf: 'center',
   },
 });
 

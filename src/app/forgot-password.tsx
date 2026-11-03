@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,10 +28,8 @@ export default function ForgotPasswordScreen() {
     }
 
     try {
-      const result = await api.forgotPassword(email.trim());
-      const continueToReset = () => router.push({ pathname: '/reset-password', params: { email: email.trim(), otp: result.mockOtp || '' } });
-      if (result.mockOtp) Alert.alert('Mã OTP khôi phục', `Mã demo của bạn: ${result.mockOtp}`, [{ text: 'Tiếp tục', onPress: continueToReset }]);
-      else continueToReset();
+      await api.forgotPassword(email.trim());
+      router.push({ pathname: '/reset-password', params: { email: email.trim() } });
     } catch (e) { setError(e instanceof Error ? e.message : 'Không thể tạo mã OTP. Vui lòng thử lại.'); }
   };
 
@@ -58,14 +55,6 @@ export default function ForgotPasswordScreen() {
         <Text style={styles.subtitle}>
           Nhập email đã đăng ký để tạo mã OTP khôi phục mật khẩu.
         </Text>
-
-        {/* Simulation note */}
-        <View style={styles.simulationBadge}>
-          <Ionicons name="information-circle-outline" size={16} color={Colors.primaryCoral} />
-          <Text style={styles.simulationText}>
-            Chế độ demo: mã OTP sẽ được trả về từ máy chủ để bạn nhập ở bước tiếp theo.
-          </Text>
-        </View>
 
         {/* Email input */}
         <View style={styles.form}>
@@ -106,15 +95,19 @@ export default function ForgotPasswordScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: 24,
     paddingVertical: Spacing.base,
     alignItems: 'center',
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+    paddingTop: 32,
   },
   backButton: {
     alignSelf: 'flex-start',
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.full,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -134,17 +127,20 @@ const styles = StyleSheet.create({
   },
   title: {
     ...Typography.h1,
-    fontSize: 26,
+    fontSize: 28,
     color: Colors.primaryText,
-    textAlign: 'center',
+    textAlign: 'left',
+    lineHeight: 36,
+    fontWeight: '700',
   },
   subtitle: {
     ...Typography.body,
     color: Colors.secondaryText,
-    textAlign: 'center',
-    marginTop: Spacing.xs,
-    lineHeight: 22,
+    textAlign: 'left',
+    marginTop: 8,
+    lineHeight: 23,
     maxWidth: 300,
+    fontSize: 15,
   },
   simulationBadge: {
     flexDirection: 'row',

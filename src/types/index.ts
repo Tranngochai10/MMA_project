@@ -23,6 +23,9 @@ export type VoucherCategory =
   | 'Fitness';
 
 export interface Brand {
+  salesChannel?: 'STORE' | 'ONLINE';
+  websiteUrl?: string;
+  address?: string;
   id: string;
   name: string;
   category: VoucherCategory;
@@ -39,6 +42,9 @@ export type VoucherStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ENDED';
 export type DiscountType = 'PERCENTAGE' | 'FIXED';
 
 export interface Voucher {
+  brandSalesChannel?: 'STORE' | 'ONLINE';
+  brandWebsiteUrl?: string;
+  brandAddress?: string;
   id: string;
   brandId: string;
   categoryId?: string;
@@ -88,6 +94,8 @@ export interface WalletVoucher {
 export type OrderStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
 
 export interface Order {
+  paymentOrderId?: string;
+  paymentReference?: string;
   id: string; // e.g. "ORD-94821"
   voucherId: string;
   voucherTitle: string;
@@ -131,7 +139,7 @@ export interface ManagerStats {
   activeVouchers: number;
   totalOrders: number;
   issuedVouchers: number;
-  simulatedRedemptions: number;
+  redeemedVouchers: number;
   totalRevenue: number;
 }
 

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   ViewStyle,
 } from 'react-native';
@@ -11,15 +10,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
+import { RemoteImage } from './RemoteImage';
+import { CartButton } from './CartButton';
 
 interface AppHeaderProps {
   title?: string;
   subtitle?: string;
   showBack?: boolean;
+  showHome?: boolean;
   onBack?: () => void;
   showUserGreeting?: boolean;
   showNotifications?: boolean;
   showOrders?: boolean;
+  showCart?: boolean;
   rightAction?: React.ReactNode;
   style?: ViewStyle;
 }
@@ -28,10 +31,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   title,
   subtitle,
   showBack = false,
+  showHome = showBack,
   onBack,
   showUserGreeting = false,
-  showNotifications = true,
-  showOrders = true,
+  showNotifications = !showBack,
+  showOrders = !showBack,
+  showCart = true,
   rightAction,
   style,
 }) => {
@@ -40,8 +45,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else {
+    } else if (router.canGoBack()) {
       router.back();
+    } else {
+      router.replace(role === 'MANAGER' ? '/manager/dashboard' : '/(user)/(tabs)/home');
     }
   };
 
@@ -49,27 +56,36 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     <View style={[styles.headerContainer, style]}>
       <View style={styles.leftContainer}>
         {showBack ? (
+          <>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại"
             activeOpacity={0.7}
             onPress={handleBack}
             style={styles.iconButton}
           >
             <Ionicons name="chevron-back" size={22} color={Colors.primaryText} />
           </TouchableOpacity>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            {!!title && <Text style={styles.headerTitle}>{title}</Text>}
+            {!!subtitle && <Text style={styles.headerSubtitle} numberOfLines={2}>{subtitle}</Text>}
+          </View>
+          </>
         ) : showUserGreeting ? (
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push(role === 'MANAGER' ? '/(manager)/profile' : '/(user)/profile')}
+            onPress={() => router.push(role === 'MANAGER' ? '/manager/profile' : '/(user)/profile')}
             style={styles.avatarRow}
           >
-            <Image
-              source={{ uri: currentUser.avatarUrl }}
+            <RemoteImage
+              uri={currentUser.avatarUrl}
+              fallbackIcon="person-outline"
               style={styles.avatar}
             />
             <View style={styles.greetingTextContainer}>
-              <Text style={styles.greetingGreeting}>Xin chào 👋</Text>
+              <Text style={styles.greetingGreeting}>Xin chào</Text>
               <Text style={styles.greetingName} numberOfLines={1}>
-                {currentUser.name}
+                {currentUser.name || 'Chào mừng bạn'}
               </Text>
             </View>
           </TouchableOpacity>
@@ -82,12 +98,26 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </View>
 
       <View style={styles.rightContainer}>
+        {showHome && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={role === 'MANAGER' ? 'Về bảng điều khiển' : 'Về trang chủ'}
+            activeOpacity={0.7}
+            onPress={() => router.dismissTo(role === 'MANAGER' ? '/manager/dashboard' : '/(user)/(tabs)/home')}
+            style={[styles.iconButton, { marginRight: Spacing.sm }]}
+          >
+            <Ionicons name="home-outline" size={20} color={Colors.primaryText} />
+          </TouchableOpacity>
+        )}
         {rightAction ? (
           rightAction
         ) : (
           <>
+            {showCart && role !== 'MANAGER' && <View style={{ marginRight: Spacing.sm }}><CartButton /></View>}
             {showNotifications && (
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Thông báo"
                 activeOpacity={0.7}
                 onPress={() => router.push('/(user)/notifications')}
                 style={styles.iconButton}
@@ -105,8 +135,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
             {showOrders && (
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Đơn hàng"
                 activeOpacity={0.7}
-                onPress={() => router.push(role === 'MANAGER' ? '/(manager)/orders' : '/(user)/orders')}
+                onPress={() => router.push(role === 'MANAGER' ? '/manager/orders' : '/(user)/orders')}
                 style={[styles.iconButton, { marginLeft: Spacing.sm }]}
               >
                 <Ionicons name="receipt-outline" size={20} color={Colors.primaryText} />
@@ -125,7 +157,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.base,
     backgroundColor: Colors.warmCream,
   },
   leftContainer: {
@@ -138,6 +170,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -149,6 +182,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.primaryCoral,
   },
   greetingTextContainer: {
+    flex: 1,
+    minWidth: 0,
     marginLeft: Spacing.md,
   },
   greetingGreeting: {
@@ -163,7 +198,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...Typography.h2,
-    fontSize: 20,
+    fontSize: 24,
     color: Colors.primaryText,
   },
   headerSubtitle: {
@@ -172,9 +207,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.full,
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -199,7 +234,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: Colors.white,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
   },
 });

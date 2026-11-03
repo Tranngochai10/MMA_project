@@ -64,7 +64,7 @@ export default function ManagerVoucherDetailScreen() {
         rightAction={
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push(`/(manager)/vouchers/${voucher.id}/edit`)}
+            onPress={() => router.push(`/manager/vouchers/${voucher.id}/edit`)}
             style={styles.editBtn}
           >
             <Ionicons name="create-outline" size={18} color={Colors.primaryCoral} />
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: BorderRadius.card,
     borderWidth: 1,
-    borderColor: '#FFDDC4',
+    borderColor: Colors.border,
   },
   editBtnText: {
     ...Typography.caption,
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     ...Typography.caption,
-    fontSize: 10,
+    fontSize: 12,
     color: Colors.secondaryText,
   },
   metricVal: {
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.secondaryText,
     marginBottom: Spacing.md,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   statusControlsRow: {
     flexDirection: 'row',

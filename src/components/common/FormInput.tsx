@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -27,12 +27,14 @@ export const FormInput: React.FC<FormInputProps> = ({
   style,
   ...props
 }) => {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
       <View
         style={[
           styles.inputWrapper,
+          focused ? styles.inputFocused : null,
           error ? styles.inputError : null,
           props.multiline ? styles.multilineWrapper : null,
         ]}
@@ -49,10 +51,14 @@ export const FormInput: React.FC<FormInputProps> = ({
           placeholderTextColor={Colors.secondaryText}
           style={[styles.input, leftIcon ? { paddingLeft: 6 } : null, style]}
           {...props}
+          accessibilityLabel={props.accessibilityLabel || label || props.placeholder}
+          textAlignVertical={props.multiline ? 'top' : 'center'}
+          onFocus={event => { setFocused(true); props.onFocus?.(event); }}
+          onBlur={event => { setFocused(false); props.onBlur?.(event); }}
         />
         {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
       </View>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? <Text accessibilityRole="alert" style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
@@ -65,15 +71,15 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     fontWeight: '600',
     color: Colors.primaryText,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.white,
-    borderWidth: 1.2,
+    borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: BorderRadius.card,
+    borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.base,
     minHeight: 48,
   },
@@ -98,6 +104,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.error,
     backgroundColor: Colors.errorLight,
   },
+  inputFocused: { borderColor: Colors.primary, backgroundColor: Colors.white },
   errorText: {
     fontSize: 12,
     color: Colors.error,

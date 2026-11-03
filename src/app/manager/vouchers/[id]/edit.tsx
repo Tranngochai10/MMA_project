@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import { DateField } from '../../../../components/common/DateField';
+import React, { useRef, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import {
-  Alert,
   View,
   Text,
+  TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -12,8 +14,10 @@ import { FormInput } from '../../../../components/common/FormInput';
 import { PrimaryButton } from '../../../../components/common/PrimaryButton';
 import { SecondaryButton } from '../../../../components/common/SecondaryButton';
 import { EmptyState } from '../../../../components/common/EmptyState';
-import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../../../constants/theme';
+import { Colors, Shadows, Spacing, Typography } from '../../../../constants/theme';
 import { useApp } from '../../../../context/AppContext';
+import { api } from '../../../../services/api';
+import { RemoteImage } from '../../../../components/common/RemoteImage';
 
 export default function EditVoucherScreen() {
   const { id } = useLocalSearchParams();
@@ -32,6 +36,26 @@ export default function EditVoucherScreen() {
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [coverImage, setCoverImage] = useState(voucher?.coverImage || '');
+  const [coverAsset, setCoverAsset] = useState<ImagePicker.ImagePickerAsset>();
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const saveLock = useRef(false);
+
+  const chooseImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) throw new Error('Mỗi ảnh tối đa 5 MB.');
+      if (asset.mimeType && !['image/jpeg', 'image/png', 'image/webp'].includes(asset.mimeType)) throw new Error('Chọn ảnh JPG, PNG hoặc WebP.');
+      setCoverAsset(asset);
+      setCoverImage(asset.uri);
+      setSaveError('');
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Không chọn được ảnh.');
+    }
+  };
 
   if (!voucher) {
     return (
@@ -67,13 +91,18 @@ export default function EditVoucherScreen() {
   };
 
   const handleSave = async () => {
-    if (!validate()) return;
+    if (saveLock.current || !validate()) return;
+    saveLock.current = true;
+    setSaving(true);
+    setSaveError('');
     try {
-      await updateVoucher(id as string, { title: title.trim(), description: description.trim(), sellingPrice: Number(sellingPrice), originalValue: Number(originalValue), totalQuantity: Number(totalQuantity), expirationDate, usageConditions: conditionsText.split('\n').map((line) => line.trim()).filter(Boolean) });
-      Alert.alert('Đã cập nhật', 'Thông tin voucher đã được lưu.', [{ text: 'OK', onPress: () => router.back() }]);
+      const savedCover = coverAsset ? (await api.uploadImage(coverAsset)).url : coverImage;
+      if (coverAsset) { setCoverImage(savedCover); setCoverAsset(undefined); }
+      await updateVoucher(id as string, { title: title.trim(), description: description.trim(), sellingPrice: Number(sellingPrice), originalValue: Number(originalValue), totalQuantity: Number(totalQuantity), expirationDate, coverImage: savedCover, usageConditions: conditionsText.split('\n').map((line) => line.trim()).filter(Boolean) });
+      router.back();
     } catch (error) {
-      Alert.alert('Không thể cập nhật', error instanceof Error ? error.message : 'Vui lòng thử lại.');
-    }
+      setSaveError(error instanceof Error ? error.message : 'Không lưu được voucher.');
+    } finally { setSaving(false); saveLock.current = false; }
   };
 
   return (
@@ -83,6 +112,12 @@ export default function EditVoucherScreen() {
       <View style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Thông Tin Voucher</Text>
+          <Text style={{ ...Typography.body, marginBottom: Spacing.sm }}>Ảnh voucher</Text>
+          <RemoteImage uri={coverImage} style={{ width: '100%', height: 190, borderRadius: 16 }} />
+          <TouchableOpacity accessibilityRole="button" disabled={saving} onPress={() => void chooseImage()} style={{ paddingVertical: 16 }}>
+            <Text style={{ color: Colors.primaryCoral, fontWeight: '700' }}>{coverImage ? 'Đổi ảnh voucher' : 'Chọn ảnh từ máy'}</Text>
+          </TouchableOpacity>
+          <Text style={{ ...Typography.caption, marginBottom: Spacing.base }}>JPG, PNG hoặc WebP · tối đa 5 MB. Ảnh được lưu khi bạn bấm Lưu thay đổi.</Text>
 
           <FormInput
             label="Tiêu đề *"
@@ -109,7 +144,7 @@ export default function EditVoucherScreen() {
           <View style={styles.rowTwo}>
             <View style={styles.flexOne}>
               <FormInput
-                label="Giá bán ưu đãi ($) *"
+                label="Giá bán ưu đãi (VND) *"
                 value={sellingPrice}
                 onChangeText={setSellingPrice}
                 keyboardType="numeric"
@@ -118,7 +153,7 @@ export default function EditVoucherScreen() {
             </View>
             <View style={[styles.flexOne, { marginLeft: Spacing.sm }]}>
               <FormInput
-                label="Giá gốc ($) *"
+                label="Giá gốc (VND) *"
                 value={originalValue}
                 onChangeText={setOriginalValue}
                 keyboardType="numeric"
@@ -138,7 +173,7 @@ export default function EditVoucherScreen() {
               />
             </View>
             <View style={[styles.flexOne, { marginLeft: Spacing.sm }]}>
-              <FormInput
+              <DateField
                 label="Ngày hết hạn *"
                 value={expirationDate}
                 onChangeText={setExpirationDate}
@@ -159,8 +194,10 @@ export default function EditVoucherScreen() {
         <PrimaryButton
           title="Lưu Thay Đổi"
           onPress={handleSave}
+          loading={saving}
           style={styles.saveBtn}
         />
+        {!!saveError && <Text accessibilityRole="alert" style={{ color: Colors.error, marginTop: Spacing.md }}>{saveError}</Text>}
 
         <SecondaryButton
           title="Hủy Bỏ"
@@ -180,23 +217,28 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.card,
-    padding: Spacing.base,
+    borderRadius: 14,
+    padding: 20,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: Spacing.base,
+    marginBottom: 20,
     ...Shadows.card,
   },
   cardTitle: {
     ...Typography.h4,
     color: Colors.primaryText,
-    marginBottom: Spacing.md,
+    marginBottom: 20,
+    fontSize: 18,
+    fontWeight: '600',
   },
   rowTwo: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 0,
   },
   flexOne: {
     flex: 1,
+    minWidth: 130,
   },
   saveBtn: {
     marginBottom: Spacing.sm,

@@ -57,7 +57,7 @@ export const WalletVoucherCard: React.FC<WalletVoucherCardProps> = ({
       <View style={styles.bottomRow}>
         <View style={styles.codeContainer}>
           <Text style={styles.codeLabel}>Mã voucher</Text>
-          <Text style={styles.codeValue}>{walletVoucher.voucherCode}</Text>
+          <Text selectable style={styles.codeValue}>{walletVoucher.voucherCode}</Text>
         </View>
 
         <View style={styles.expiryContainer}>
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   },
   cardInactive: {
     opacity: 0.78,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: Colors.background,
   },
   topRow: {
     flexDirection: 'row',
@@ -162,22 +162,25 @@ const styles = StyleSheet.create({
   },
   codeLabel: {
     ...Typography.caption,
-    fontSize: 10,
+    fontSize: 12,
     color: Colors.secondaryText,
   },
   codeValue: {
     ...Typography.bodySmall,
     fontWeight: '800',
     color: Colors.primaryText,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
     marginTop: 1,
+    fontFamily: 'monospace',
+    fontSize: 20,
+    lineHeight: 28,
   },
   expiryContainer: {
     flex: 1,
   },
   expiryLabel: {
     ...Typography.caption,
-    fontSize: 10,
+    fontSize: 12,
     color: Colors.secondaryText,
   },
   expiryValue: {

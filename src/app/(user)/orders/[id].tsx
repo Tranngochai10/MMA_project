@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { api } from '../../../services/api';
+import { mapOrder } from '../../../services/orderMapper';
+import type { Order } from '../../../types';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -20,7 +22,14 @@ export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams();
   const { getOrderById, getWalletVoucherById } = useApp();
 
-  const order = getOrderById(id as string);
+  const [loadedOrder, setLoadedOrder] = useState<Order>();
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    api.order(String(id)).then(data => { if (active) setLoadedOrder(mapOrder(data)); }).catch(e => { if (active) setError(e.message); });
+    return () => { active = false; };
+  }, [id]);
+  const order = loadedOrder || getOrderById(id as string);
 
   if (!order) {
     return (
@@ -28,7 +37,7 @@ export default function OrderDetailScreen() {
         <EmptyState
           icon="receipt-outline"
           title="Order Not Found"
-          message="Could not locate order details."
+          message={error || "Loading order details..."}
           actionLabel="Back to Orders"
           onAction={() => router.back()}
         />
@@ -119,6 +128,9 @@ export default function OrderDetailScreen() {
         </View>
 
         {/* Action Button */}
+        {order.status === 'PENDING' && order.paymentMethod === 'MB_BANK_TRANSFER' && order.paymentOrderId && (
+          <PrimaryButton title="Xem QR và kiểm tra thanh toán" onPress={() => router.push({ pathname: '/(user)/checkout', params: { voucherId: order.voucherId, orderId: order.paymentOrderId } })} />
+        )}
         {order.status === 'PAID' && (
           <PrimaryButton
             title="Mở Trong Ví Voucher"
@@ -168,7 +180,7 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.secondaryText,
     marginTop: 2,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   card: {
     backgroundColor: Colors.white,
@@ -200,9 +212,11 @@ const styles = StyleSheet.create({
   },
   voucherTitle: {
     ...Typography.body,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.primaryText,
     marginTop: 2,
+    fontSize: 22,
+    lineHeight: 30,
   },
   walletCodeBox: {
     backgroundColor: Colors.warmCream,
@@ -221,7 +235,7 @@ const styles = StyleSheet.create({
     ...Typography.h3,
     color: Colors.primaryCoral,
     letterSpacing: 2,
-    fontWeight: '900',
+    fontWeight: '800',
     marginTop: 2,
   },
   walletCodeStatus: {
@@ -260,8 +274,9 @@ const styles = StyleSheet.create({
   },
   totalVal: {
     ...Typography.h3,
-    color: Colors.primaryCoral,
-    fontWeight: '900',
+    color: Colors.primary,
+    fontWeight: '800',
+    fontSize: 26,
   },
   actionBtn: {
     marginTop: Spacing.sm,

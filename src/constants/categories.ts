@@ -12,10 +12,3 @@ export const CATEGORIES: { id: VoucherCategory; label: string; icon: string }[] 
   { id: 'Fitness', label: 'Thể thao', icon: 'fitness-outline' },
 ];
 
-export const PAYMENT_METHODS = [
-  { id: 'wallet', name: 'Ví Dealora', balance: '', icon: 'wallet-outline' },
-  { id: 'card', name: 'Thẻ Quốc tế / Ghi nợ (•••• 4242)', balance: '', icon: 'card-outline' },
-  { id: 'applepay', name: 'Apple Pay / Google Pay', balance: '', icon: 'phone-portrait-outline' },
-  { id: 'paypal', name: 'Ví điện tử / Chuyển khoản', balance: '', icon: 'cash-outline' },
-];
-

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Image, Text, StyleSheet, ViewStyle } from 'react-native';
-import { BorderRadius, Colors, Shadows } from '../../constants/theme';
+import { Colors, Shadows } from '../../constants/theme';
 
 interface BrandLogoProps {
   url?: string;

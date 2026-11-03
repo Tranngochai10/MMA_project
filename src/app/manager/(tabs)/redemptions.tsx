@@ -1,3 +1,4 @@
+import { QrScannerModal } from '../../../components/common/QrScannerModal';
 import React, { useState, useMemo } from 'react';
 import {
   View,
@@ -19,16 +20,20 @@ export default function ManagerRedemptionsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [voucherCode, setVoucherCode] = useState('');
   const [verified, setVerified] = useState(false);
+  const [scanner, setScanner] = useState(false);
+  const [scannedToken, setScannedToken] = useState('');
   const [busy, setBusy] = useState(false);
   const [resultMessage, setResultMessage] = useState('');
   const [resultError, setResultError] = useState(false);
 
-  const verify = async () => {
-    if (!voucherCode.trim()) { setResultError(true); setResultMessage('Nhập mã voucher cần kiểm tra trước.'); return; }
+  const verify = async (raw = voucherCode) => {
+    setScannedToken(raw.startsWith('DLQR:') ? raw : '');
+    if (!raw.trim()) { setResultError(true); setResultMessage('Nhập mã voucher cần kiểm tra trước.'); return; }
     setBusy(true);
     setResultMessage('');
     try {
-      const result = await verifyVoucherCode(voucherCode.trim());
+      const result = await verifyVoucherCode(raw.trim());
+      if (raw.startsWith('DLQR:')) { setScannedToken(raw); setVoucherCode(String(result.voucherCode || '')); }
       setVerified(result.validityStatus === 'VALID' && !result.isUsed);
       const voucher = result.voucher as Record<string, unknown> | undefined;
       const customer = result.customer as Record<string, unknown> | undefined;
@@ -46,9 +51,9 @@ export default function ManagerRedemptionsScreen() {
   const redeem = async () => {
     setBusy(true);
     try {
-      const result = await redeemVoucherCode(voucherCode.trim());
+      const result = await redeemVoucherCode(scannedToken || voucherCode.trim());
       setVerified(false);
-      setVoucherCode('');
+      setVoucherCode(''); setScannedToken('');
       const message = `Đã xác nhận đổi voucher ${String(result.voucherCode || '')}.`;
       setResultError(false); setResultMessage(message); notify(message);
     } catch (error) { const message = error instanceof Error ? error.message : 'Không thể đổi voucher. Vui lòng thử lại.'; setResultError(true); setResultMessage(message); notify(message, 'error'); }
@@ -80,7 +85,7 @@ export default function ManagerRedemptionsScreen() {
         <View style={styles.disclaimerTexts}>
           <Text style={styles.disclaimerTitle}>Hệ Thống Xác Thực Ưu Đãi</Text>
           <Text style={styles.disclaimerSub}>
-            Nhật ký sử dụng được ghi nhận tức thì khi khách hàng kích hoạt voucher từ Ví điện tử. Hỗ trợ đối tác quản lý lượt sử dụng minh bạch.
+            Quét QR từ ví khách hàng, kiểm tra thông tin và xác nhận đổi. Mỗi voucher chỉ sử dụng một lần.
           </Text>
         </View>
       </View>
@@ -92,11 +97,13 @@ export default function ManagerRedemptionsScreen() {
         showFilterButton={false}
       />
 
+      {scanner && <QrScannerModal onClose={() => setScanner(false)} onScanned={data => { setScanner(false); void verify(data); }} />}
       <View style={styles.verifyBox}>
+        <TouchableOpacity onPress={() => { setVerified(false); setScanner(true); }} style={styles.verifyButton}><Ionicons name="qr-code-outline" size={24} color={Colors.white} /></TouchableOpacity>
         <Text style={styles.verifyTitle}>Xác thực mã tại quầy</Text>
-        <TextInput value={voucherCode} onChangeText={(value) => { setVoucherCode(value.toUpperCase()); setVerified(false); }} placeholder="Nhập mã voucher" autoCapitalize="characters" style={styles.codeInput} />
+        <TextInput value={voucherCode} onChangeText={(value) => { setVoucherCode(value.toUpperCase()); setScannedToken(''); setVerified(false); }} placeholder="Nhập mã voucher" autoCapitalize="characters" style={styles.codeInput} />
         <View style={styles.verifyActions}>
-          <TouchableOpacity disabled={busy} onPress={verify} style={styles.verifyButton}><Text style={styles.verifyButtonText}>{busy ? 'Đang kiểm tra…' : 'Kiểm tra mã'}</Text></TouchableOpacity>
+          <TouchableOpacity disabled={busy} onPress={() => verify()} style={styles.verifyButton}><Text style={styles.verifyButtonText}>{busy ? 'Đang kiểm tra…' : 'Kiểm tra mã'}</Text></TouchableOpacity>
           {verified ? <TouchableOpacity disabled={busy} onPress={redeem} style={[styles.verifyButton, styles.redeemButton]}><Text style={styles.verifyButtonText}>Xác nhận đổi</Text></TouchableOpacity> : null}
         </View>
         {resultMessage ? <Text accessibilityRole="alert" style={[styles.resultMessage, resultError ? styles.resultError : styles.resultSuccess]}>{resultMessage}</Text> : null}
@@ -109,11 +116,11 @@ export default function ManagerRedemptionsScreen() {
               <View style={styles.cardHeader}>
                 <View style={styles.codeWrap}>
                   <Text style={styles.codeLabel}>Mã Voucher</Text>
-                  <Text style={styles.codeValue}>{red.voucherCode}</Text>
+                  <Text selectable style={styles.codeValue}>{red.voucherCode}</Text>
                 </View>
 
                 <View style={styles.badge}>
-                  <Ionicons name="checkmark-done" size={14} color="#1E40AF" />
+                  <Ionicons name="checkmark-done" size={14} color={Colors.primaryDark} />
                   <Text style={styles.badgeText}>ĐÃ SỬ DỤNG</Text>
                 </View>
               </View>
@@ -147,11 +154,15 @@ export default function ManagerRedemptionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  verifyBox: { marginHorizontal: Spacing.base, marginBottom: Spacing.md, padding: Spacing.md, borderRadius: BorderRadius.card, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border },
+  verifyBox: { marginHorizontal: Spacing.base, marginBottom: Spacing.md, padding: 20, borderRadius: 14, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,},
   verifyTitle: { ...Typography.body, fontWeight: '700', color: Colors.primaryText, marginBottom: Spacing.sm },
-  codeInput: { height: 46, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.md, color: Colors.primaryText },
+  codeInput: { height: 46, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingHorizontal: 14, color: Colors.primaryText,
+    minHeight: 48,
+    fontSize: 16,
+    backgroundColor: Colors.background,
+  },
   verifyActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
-  verifyButton: { flex: 1, minHeight: 42, borderRadius: BorderRadius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primaryCoral },
+  verifyButton: { flex: 1, minHeight: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primaryCoral },
   redeemButton: { backgroundColor: Colors.success },
   verifyButtonText: { color: Colors.white, fontWeight: '700' },
   resultMessage: { marginTop: Spacing.sm, padding: Spacing.sm, borderRadius: BorderRadius.sm, overflow: 'hidden' },
@@ -166,7 +177,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.card,
     borderWidth: 1,
-    borderColor: '#FFDDC4',
+    borderColor: Colors.border,
   },
   disclaimerTexts: {
     flex: 1,
@@ -181,15 +192,15 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.secondaryText,
     marginTop: 2,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   listContainer: {
     paddingHorizontal: Spacing.base,
   },
   redemptionCard: {
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.card,
-    padding: Spacing.base,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: Spacing.md,
@@ -199,12 +210,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
   },
   codeWrap: {},
   codeLabel: {
     ...Typography.caption,
     color: Colors.secondaryText,
-    fontSize: 10,
+    fontSize: 12,
     textTransform: 'uppercase',
   },
   codeValue: {
@@ -223,9 +236,9 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     ...Typography.caption,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
-    color: '#1E40AF',
+    color: Colors.primaryDark,
     marginLeft: 3,
   },
   divider: {
@@ -235,14 +248,18 @@ const styles = StyleSheet.create({
   },
   voucherTitle: {
     ...Typography.body,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Colors.primaryText,
     marginBottom: Spacing.sm,
+    fontSize: 16,
+    lineHeight: 23,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
   },
   customerCol: {
     flexDirection: 'row',

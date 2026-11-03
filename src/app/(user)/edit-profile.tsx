@@ -1,3 +1,4 @@
+import { api } from '../../services/api';
 import React, { useState } from 'react';
 import {
   View,
@@ -25,42 +26,20 @@ export default function EditProfileScreen() {
   const [phone, setPhone] = useState(currentUser.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl);
 
+  const [avatarAsset, setAvatarAsset] = useState<ImagePicker.ImagePickerAsset>();
   const [nameError, setNameError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handlePickImage = async () => {
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        // Fallback demo avatars cycle
-        const avatars = [
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&auto=format&fit=crop&q=80',
-        ];
-        const next = avatars[(avatars.indexOf(avatarUrl) + 1) % avatars.length];
-        setAvatarUrl(next);
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0].uri) {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+      if (!result.canceled) {
+        setAvatarAsset(result.assets[0]);
         setAvatarUrl(result.assets[0].uri);
       }
-    } catch {
-      // Toggle demo avatar safely
-      const demoAvatars = [
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-      ];
-      setAvatarUrl(demoAvatars[0]);
+    } catch (error) {
+      Alert.alert('Image selection failed', error instanceof Error ? error.message : 'Please try again.');
     }
   };
 
@@ -80,7 +59,9 @@ export default function EditProfileScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await updateProfile({ name: name.trim(), phone: phone.trim(), avatarUrl });
+      const uploadedAvatar = avatarAsset ? (await api.uploadImage(avatarAsset)).url : avatarUrl;
+      if (avatarAsset) { setAvatarUrl(uploadedAvatar); setAvatarAsset(undefined); }
+      await updateProfile({ name: name.trim(), phone: phone.trim(), avatarUrl: uploadedAvatar });
       setShowSuccessModal(true);
     } catch (error) {
       Alert.alert('Không thể cập nhật hồ sơ', error instanceof Error ? error.message : 'Vui lòng thử lại.');
@@ -151,7 +132,7 @@ export default function EditProfileScreen() {
 
       <SuccessModal
         visible={showSuccessModal}
-        title="Cập nhật thành công! ✨"
+        title="Cập nhật thành công! "
         message="Thông tin hồ sơ của bạn đã được lưu thành công."
         buttonLabel="Quay lại hồ sơ"
         onClose={() => {

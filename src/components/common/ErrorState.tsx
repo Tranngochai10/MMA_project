@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BorderRadius, Colors, Spacing, Typography } from '../../constants/theme';
+import { Colors, Spacing, Typography } from '../../constants/theme';
 import { PrimaryButton } from './PrimaryButton';
 
 interface ErrorStateProps {

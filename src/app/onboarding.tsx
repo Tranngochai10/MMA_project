@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '../components/common/ScreenContainer';
 import { PrimaryButton } from '../components/common/PrimaryButton';
-import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
+import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -22,15 +22,15 @@ const SLIDES = [
     description:
       'Trải nghiệm các voucher giảm giá từ những thương hiệu hàng đầu — ẩm thực, cà phê, du lịch và giải trí.',
     icon: 'sparkles' as const,
-    accent: '#FF765F',
+    accent: Colors.primaryCoral,
   },
   {
     id: 2,
     title: 'Săn voucher dễ dàng',
     description:
-      'Tiết kiệm đến 80% so với giá gốc. Voucher được gửi tức thì vào ví điện tử cá nhân của bạn.',
+      'So sánh giá và điều kiện của từng ưu đãi. Theo dõi voucher đã nhận ngay trong ví cá nhân.',
     icon: 'pricetags' as const,
-    accent: '#FF9D43',
+    accent: Colors.primaryOrange,
   },
   {
     id: 3,
@@ -38,7 +38,7 @@ const SLIDES = [
     description:
       'Lưu trữ, kiểm tra và sử dụng voucher mọi lúc mọi nơi. Trải nghiệm quét mã và đổi ưu đãi nhanh chóng.',
     icon: 'wallet' as const,
-    accent: '#2E9D68',
+    accent: Colors.success,
   },
 ];
 

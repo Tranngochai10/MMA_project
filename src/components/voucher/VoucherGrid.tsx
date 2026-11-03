@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Voucher } from '../../types';
 import { Spacing } from '../../constants/theme';
@@ -17,10 +17,12 @@ export const VoucherGrid: React.FC<VoucherGridProps> = ({
   onFavoritePress,
   style,
 }) => {
+  const [width, setWidth] = useState(0);
+  const columns = width >= 900 ? 3 : width > 0 && width < 340 ? 1 : 2;
   return (
-    <View style={[styles.grid, style]}>
+    <View onLayout={event => setWidth(event.nativeEvent.layout.width)} style={[styles.grid, style]}>
       {vouchers.map((voucher) => (
-        <View key={voucher.id} style={styles.gridItem}>
+        <View key={voucher.id} style={[styles.gridItem, { width: columns === 3 ? '32%' : columns === 1 ? '100%' : '48.2%' }]}>
           <VoucherCard
             voucher={voucher}
             onPress={() => onVoucherPress(voucher)}

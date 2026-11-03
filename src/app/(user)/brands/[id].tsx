@@ -1,11 +1,11 @@
+import { RemoteImage } from '../../../components/common/RemoteImage';
+import { BrandPresence } from '../../../components/brand/BrandPresence';
 import React from 'react';
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,7 +44,7 @@ export default function BrandDetailScreen() {
     <ScreenContainer scrollable edges={['top', 'left', 'right']}>
       {/* Cover Image & Header Controls */}
       <View style={styles.coverWrapper}>
-        <Image source={{ uri: brand.coverImage }} style={styles.coverImage} />
+        <RemoteImage uri={brand.coverImage} style={styles.coverImage} />
         <View style={styles.coverOverlay} />
 
         {/* Back and Favorite Floating Buttons */}
@@ -80,10 +80,7 @@ export default function BrandDetailScreen() {
       <View style={styles.infoCard}>
         <View style={styles.nameRow}>
           <Text style={styles.brandName}>{brand.name}</Text>
-          <View style={styles.ratingBadge}>
-            <Ionicons name="star" size={14} color="#FFB800" />
-            <Text style={styles.ratingText}>{brand.rating.toFixed(1)}</Text>
-          </View>
+
         </View>
 
         <Text style={styles.categoryTag}>{brand.category}</Text>
@@ -91,28 +88,17 @@ export default function BrandDetailScreen() {
 
         {/* Key Features / Badges */}
         <View style={styles.badgesRow}>
-          <View style={styles.featurePill}>
-            <Ionicons name="shield-checkmark" size={14} color={Colors.success} />
-            <Text style={styles.featurePillText}>Đối tác chính thức</Text>
-          </View>
+
           <View style={styles.featurePill}>
             <Ionicons name="pricetag" size={14} color={Colors.primaryCoral} />
             <Text style={styles.featurePillText}>{brandVouchers.length} Ưu đãi khả dụng</Text>
           </View>
         </View>
 
-        {/* Brand Policy / Terms */}
-        <View style={styles.termsContainer}>
-          <Text style={styles.termsTitle}>Điều Kiện Áp Dụng Chung:</Text>
-          <Text style={styles.termsBody}>
-            • Áp dụng trên toàn quốc tại hệ thống cửa hàng chính hãng và website đối tác.{'\n'}
-            • Không áp dụng đồng thời với các chương trình khuyến mãi khác.{'\n'}
-            • Voucher có giá trị sử dụng một lần trước ngày hết hạn quy định.
-          </Text>
-        </View>
       </View>
 
       {/* Available Vouchers */}
+      <View style={{ marginHorizontal: Spacing.base }}><BrandPresence name={brand.name} salesChannel={brand.salesChannel} websiteUrl={brand.websiteUrl} /></View>
       <SectionHeader
         title="Voucher Đang Phát Hành"
         subtitle={`Các mã giảm giá hấp dẫn từ ${brand.name}`}

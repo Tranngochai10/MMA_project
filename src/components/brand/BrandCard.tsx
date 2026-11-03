@@ -65,10 +65,7 @@ export const BrandCard: React.FC<BrandCardProps> = ({
             <Ionicons name="pricetag-outline" size={13} color={Colors.primaryCoral} />
             <Text style={styles.badgeText}>{brand.voucherCount} ưu đãi</Text>
           </View>
-          <View style={styles.ratingRow}>
-            <Ionicons name="star" size={13} color="#FFB800" />
-            <Text style={styles.ratingText}>{brand.rating.toFixed(1)}</Text>
-          </View>
+
         </View>
       </View>
     </TouchableOpacity>

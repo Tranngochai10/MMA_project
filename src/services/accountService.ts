@@ -7,6 +7,6 @@ export const accountService = {
   logout: api.logout,
   changePassword: api.changePassword,
   wallet: api.wallet,
-  useVoucher: api.useVoucher,
-  buyVoucher: api.buyVoucher,
+  voucherQr: api.voucherQr,
+  createTransferOrder: api.createTransferOrder,
 };

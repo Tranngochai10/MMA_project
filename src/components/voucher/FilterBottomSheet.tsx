@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Brand, FilterState, VoucherCategory } from '../../types';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../constants/theme';
-import { CATEGORIES } from '../../constants/categories';
+import { categoryChoices } from '../../utils/categoryChoices';
 import { PrimaryButton } from '../common/PrimaryButton';
 
 interface FilterBottomSheetProps {
@@ -56,9 +56,9 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
 
   const priceOptions = [
     { label: 'Tất cả mức giá', max: undefined },
-    { label: 'Dưới $10', max: 10 },
-    { label: 'Dưới $25', max: 25 },
-    { label: 'Dưới $50', max: 50 },
+    { label: 'Dưới 100.000 ₫', max: 100000 },
+    { label: 'Dưới 250.000 ₫', max: 250000 },
+    { label: 'Dưới 500.000 ₫', max: 500000 },
   ];
 
   const handleApply = () => {
@@ -105,7 +105,7 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
                 {/* Category Filter */}
                 <Text style={styles.sectionTitle}>Danh mục</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
-                  {CATEGORIES.map((cat) => (
+                  {categoryChoices(brands.map(brand => brand.category)).map((cat) => (
                     <TouchableOpacity
                       key={cat.id}
                       activeOpacity={0.7}

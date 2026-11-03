@@ -1,9 +1,10 @@
 export interface ApiUser { _id: string; full_name: string; email: string; phone?: string; avatar_url?: string; role: "USER" | "MANAGER"; assignedBrandId?: string | { _id: string } | null; }
 export interface AuthResponse { token: string; expires_in: string; }
 export interface CategoryDto { _id: string; name: string; slug: string; icon?: string; order?: number; }
-export interface BrandDto { _id: string; name: string; code?: string; category?: string; categoryId?: string; categoryName?: string; logo_url?: string; cover_image_url?: string; description?: string; activeVouchersCount?: number; rating?: number; isFavorite?: boolean; }
+export interface BrandDto { salesChannel?: "STORE" | "ONLINE"; websiteUrl?: string; _id: string; name: string; address?: string; code?: string; category?: string; categoryId?: string; categoryName?: string; logo_url?: string; cover_image_url?: string; description?: string; activeVouchersCount?: number; rating?: number; isFavorite?: boolean; }
 export interface VoucherDto {
-  _id: string; title: string; description?: string; brand?: { _id: string | null; name: string; logo_url?: string; cover_image_url?: string; rating?: number };
+  _id: string; title: string; description?: string; brand?: { _id: string | null; name: string; salesChannel?: "STORE" | "ONLINE"; websiteUrl?: string; address?: string; logo_url?: string; cover_image_url?: string; rating?: number };
+  brandSalesChannel?: "STORE" | "ONLINE"; brandWebsiteUrl?: string;
   brandId?: string; brandName?: string; brandLogo?: string; category?: string; categoryId?: string;
   discountType?: "PERCENTAGE" | "FIXED"; discountValue?: number; discountPercent?: number; discountDisplay?: string; sellingPrice?: number;
   originalValue?: number; totalQuantity?: number; availableQuantity?: number; startDate?: string; expirationDate?: string;
@@ -17,6 +18,6 @@ export interface WalletVoucherDto {
 }
 export interface PurchaseDto { walletVoucherId: string; orderId?: string; orderCode: string; voucherCode: string; voucherTitle: string; brandName: string; brandLogo: string; totalAmount: number; paymentMethod: string; purchasedDate: string; expirationDate: string; }
 export interface FavoriteToggleDto { brandId?: string; voucherId?: string; isFavorite: boolean; message: string; }
-export interface OrderDto { _id?: string; id?: string; orderCode?: string; voucherId?: string | null; voucherTitle?: string; brandName?: string; brandLogo?: string; amount?: number; paymentMethod?: string; status?: string; createdAt?: string; walletVoucherId?: string | null; }
+export interface OrderDto { paymentReference?: string; _id?: string; id?: string; orderCode?: string; voucherId?: string | null; voucherTitle?: string; brandName?: string; brandLogo?: string; amount?: number; paymentMethod?: string; status?: string; createdAt?: string; walletVoucherId?: string | null; }
 export interface NotificationDto { _id?: string; id?: string; type?: string; title?: string; message?: string; createdAt?: string; timestamp?: string; isRead?: boolean; actionUrl?: string; }
-export interface ManagerStatsDto { stats: { activeVouchers: number; totalOrders: number; issuedVouchers: number; simulatedRedemptions: number; totalRevenue: number }; recentOrders: { id: string; voucherTitle: string; brandName: string; amount: number; status: string; createdAt: string }[]; recentRedemptions: { id: string; voucherCode: string; customerName: string; voucherTitle: string; redeemedDate: string; status: string }[] }
+export interface ManagerStatsDto { stats: { activeVouchers: number; totalOrders: number; issuedVouchers: number; redeemedVouchers: number; totalRevenue: number }; recentOrders: { id: string; voucherTitle: string; brandName: string; amount: number; status: string; createdAt: string }[]; recentRedemptions: { id: string; voucherCode: string; customerName: string; voucherTitle: string; redeemedDate: string; status: string }[] }

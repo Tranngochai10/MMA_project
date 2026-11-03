@@ -66,7 +66,7 @@ export default function LoginScreen() {
       } else if (role === 'USER' && returnToVoucherId) {
         router.replace({ pathname: '/(user)/checkout', params: { voucherId: returnToVoucherId } });
       } else {
-        router.replace(role === 'MANAGER' ? '/(manager)/dashboard' : '/(user)/home');
+        router.replace(role === 'MANAGER' ? '/manager/dashboard' : '/(user)/home');
       }
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : 'Đăng nhập không thành công.');
@@ -168,14 +168,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Role Preview Shortcut */}
-          <TouchableOpacity
-            style={styles.rolePreviewLink}
-            onPress={() => router.push('/role-preview')}
-          >
-            <Ionicons name="swap-horizontal-outline" size={14} color={Colors.primaryCoral} />
-            <Text style={styles.rolePreviewText}>Cổng chuyển đổi vai trò Demo</Text>
-          </TouchableOpacity>
+
         </View>
       </View>
     </ScreenContainer>
@@ -184,34 +177,42 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: 24,
     paddingVertical: Spacing.lg,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+    paddingTop: 32,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
+    alignItems: 'flex-start',
+    marginBottom: 28,
   },
   logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: BorderRadius.lg,
+    width: 52,
+    height: 52,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.base,
+    marginBottom: 24,
     ...Shadows.card,
   },
   title: {
     ...Typography.h1,
-    fontSize: 26,
+    fontSize: 28,
     color: Colors.primaryText,
-    textAlign: 'center',
+    textAlign: 'left',
+    lineHeight: 36,
+    fontWeight: '700',
   },
   subtitle: {
     ...Typography.body,
     color: Colors.secondaryText,
-    textAlign: 'center',
-    marginTop: 4,
+    textAlign: 'left',
+    marginTop: 8,
     maxWidth: 280,
+    fontSize: 15,
+    lineHeight: 23,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -229,12 +230,20 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    padding: 20,
   },
   optionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.lg,
+    marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 4,
   },
   rememberMeRow: {
     flexDirection: 'row',
@@ -272,8 +281,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.base,
+    marginTop: 24,
     paddingVertical: 8,
+    minHeight: 44,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 16,
   },
   rolePreviewText: {
     ...Typography.caption,

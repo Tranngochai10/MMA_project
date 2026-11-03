@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Voucher, VoucherStatus } from '../../types';
@@ -19,6 +19,7 @@ export const ManagerVoucherCard: React.FC<ManagerVoucherCardProps> = ({
   onEdit,
   onStatusChange,
 }) => {
+  const [actionsOpen, setActionsOpen] = useState(false);
   return (
     <TouchableOpacity
       activeOpacity={0.88}
@@ -65,7 +66,11 @@ export const ManagerVoucherCard: React.FC<ManagerVoucherCardProps> = ({
           <Ionicons name="create-outline" size={16} color={Colors.primaryText} />
           <Text style={styles.actionBtnText}>Sửa</Text>
         </TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Thao tác trạng thái" accessibilityState={{ expanded: actionsOpen }} onPress={() => setActionsOpen(!actionsOpen)} style={styles.actionBtn}>
+          <Ionicons name="ellipsis-horizontal" size={18} color={Colors.secondaryText} />
+        </TouchableOpacity>
 
+        {actionsOpen && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, width: '100%', justifyContent: 'flex-end' }}>
         {voucher.status === 'ACTIVE' ? (
           <TouchableOpacity
             activeOpacity={0.7}
@@ -105,6 +110,7 @@ export const ManagerVoucherCard: React.FC<ManagerVoucherCardProps> = ({
             <Text style={[styles.actionBtnText, { color: Colors.error }]}>Kết thúc</Text>
           </TouchableOpacity>
         )}
+        </View>}
       </View>
     </TouchableOpacity>
   );
@@ -145,16 +151,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.warmCream,
-    padding: Spacing.sm,
+    padding: 12,
     borderRadius: BorderRadius.md,
     marginVertical: Spacing.md,
+    flexWrap: 'wrap',
+    gap: 12,
   },
   statItem: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    width: '46%',
   },
   statLabel: {
     ...Typography.caption,
-    fontSize: 10,
+    fontSize: 12,
     color: Colors.secondaryText,
   },
   statValue: {
@@ -168,6 +177,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: Spacing.sm,
+    flexWrap: 'wrap',
   },
   actionBtn: {
     flexDirection: 'row',
@@ -178,6 +188,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.white,
+    minHeight: 44,
   },
   actionBtnText: {
     ...Typography.caption,

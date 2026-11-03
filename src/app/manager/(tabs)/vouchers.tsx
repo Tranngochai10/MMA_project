@@ -78,7 +78,7 @@ export default function ManagerVouchersScreen() {
         rightAction={
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push('/(manager)/vouchers/create')}
+            onPress={() => router.push('/manager/vouchers/create')}
             accessibilityRole="button"
             accessibilityLabel="Tạo voucher mới"
             hitSlop={8}
@@ -136,8 +136,8 @@ export default function ManagerVouchersScreen() {
             <ManagerVoucherCard
               key={v.id}
               voucher={v}
-              onPress={() => router.push(`/(manager)/vouchers/${v.id}`)}
-              onEdit={() => router.push(`/(manager)/vouchers/${v.id}/edit`)}
+              onPress={() => router.push(`/manager/vouchers/${v.id}`)}
+              onEdit={() => router.push(`/manager/vouchers/${v.id}/edit`)}
               onStatusChange={(targetStatus: VoucherStatus) =>
                 handleStatusChangeRequest(v, targetStatus)
               }
@@ -149,7 +149,7 @@ export default function ManagerVouchersScreen() {
             title="Không tìm thấy voucher"
             message="Không có chiến dịch voucher nào phù hợp với điều kiện tìm kiếm."
             actionLabel="Tạo Chiến Dịch Mới"
-            onAction={() => router.push('/(manager)/vouchers/create')}
+            onAction={() => router.push('/manager/vouchers/create')}
           />
         )}
       </View>
@@ -205,13 +205,15 @@ const styles = StyleSheet.create({
   tabChip: {
     paddingHorizontal: 16,
     height: 36,
-    borderRadius: BorderRadius.card,
+    borderRadius: 10,
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
     marginRight: Spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
+    minHeight: 44,
+    paddingVertical: 10,
   },
   tabChipActive: {
     backgroundColor: Colors.primaryCoral,

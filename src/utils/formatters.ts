@@ -1,14 +1,14 @@
 export const formatCurrency = (amount: number): string => {
-  return `$${amount.toFixed(2)}`;
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
 };
 
 export const formatDate = (dateString: string): string => {
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
+    return date.toLocaleDateString('vi-VN', {
+      month: '2-digit',
+      day: '2-digit',
       year: 'numeric',
     });
   } catch {

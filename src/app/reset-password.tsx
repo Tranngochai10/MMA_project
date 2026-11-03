@@ -13,7 +13,7 @@ import { PasswordInput } from '../components/common/PasswordInput';
 import { PrimaryButton } from '../components/common/PrimaryButton';
 import { FormInput } from '../components/common/FormInput';
 import { api } from '../services/api';
-import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
+import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams();
@@ -128,15 +128,19 @@ export default function ResetPasswordScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: 24,
     paddingVertical: Spacing.base,
     alignItems: 'center',
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+    paddingTop: 32,
   },
   backButton: {
     alignSelf: 'flex-start',
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.full,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -156,18 +160,21 @@ const styles = StyleSheet.create({
   },
   title: {
     ...Typography.h1,
-    fontSize: 26,
+    fontSize: 28,
     color: Colors.primaryText,
-    textAlign: 'center',
+    textAlign: 'left',
+    lineHeight: 36,
+    fontWeight: '700',
   },
   subtitle: {
     ...Typography.body,
     color: Colors.secondaryText,
-    textAlign: 'center',
-    marginTop: Spacing.xs,
-    lineHeight: 22,
+    textAlign: 'left',
+    marginTop: 8,
+    lineHeight: 23,
     maxWidth: 300,
     marginBottom: Spacing.xl,
+    fontSize: 15,
   },
   form: {
     width: '100%',

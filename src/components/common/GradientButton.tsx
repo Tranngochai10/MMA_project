@@ -9,7 +9,7 @@ import {
   StyleProp,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BorderRadius, Colors, Shadows, Spacing } from '../../constants/theme';
+import { BorderRadius, Colors, Spacing } from '../../constants/theme';
 
 interface GradientButtonProps {
   title: string;
@@ -41,6 +41,8 @@ export const GradientButton: React.FC<GradientButtonProps> = ({
       activeOpacity={0.88}
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       style={[styles.container, disabled && styles.disabled, style]}
     >
       <LinearGradient
@@ -127,6 +129,8 @@ export const SecondaryButton: React.FC<SecondaryButtonProps> = ({
       activeOpacity={0.8}
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       style={[styles.secondaryContainer, disabled && styles.disabled, style]}
     >
       {loading ? (
@@ -151,14 +155,14 @@ export const SecondaryButton: React.FC<SecondaryButtonProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: BorderRadius.card,
+    borderRadius: BorderRadius.md,
     overflow: 'hidden',
-    ...Shadows.soft,
   },
   gradient: {
     paddingVertical: 14,
     paddingHorizontal: Spacing.xl,
-    borderRadius: BorderRadius.card,
+    borderRadius: BorderRadius.md,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -172,10 +176,11 @@ const styles = StyleSheet.create({
   secondaryContainer: {
     paddingVertical: 14,
     paddingHorizontal: Spacing.xl,
-    borderRadius: BorderRadius.card,
-    backgroundColor: Colors.lightPeach,
+    borderRadius: BorderRadius.md,
+    minHeight: 48,
+    backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: '#FFDDC4',
+    borderColor: Colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

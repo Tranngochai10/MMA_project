@@ -12,6 +12,7 @@ export default function UserLayout() {
       <Stack.Screen name="brands/[id]" />
       <Stack.Screen name="vouchers/[id]" />
       <Stack.Screen name="checkout" />
+      <Stack.Screen name="cart" />
       <Stack.Screen name="order-result" />
       <Stack.Screen name="orders" />
       <Stack.Screen name="orders/[id]" />

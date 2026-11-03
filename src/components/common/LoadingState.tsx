@@ -8,7 +8,7 @@ interface LoadingStateProps {
 }
 
 export const LoadingState: React.FC<LoadingStateProps> = ({
-  message = 'Loading brand vouchers...',
+  message = 'Đang tải dữ liệu…',
   style,
 }) => {
   return (

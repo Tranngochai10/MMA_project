@@ -7,7 +7,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BorderRadius, Colors, Shadows, Spacing } from '../../constants/theme';
+import { Colors, Shadows, Spacing } from '../../constants/theme';
 
 interface SearchBarProps {
   value: string;
@@ -40,6 +40,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           style={styles.searchIcon}
         />
         <TextInput
+          accessibilityLabel="Tìm kiếm voucher và thương hiệu"
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -51,6 +52,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         />
         {value.length > 0 && (
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Xóa từ khóa tìm kiếm"
             onPress={() => onChangeText('')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.clearIcon}
@@ -62,6 +65,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
       {showFilterButton && onFilterPress && (
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Bộ lọc voucher"
           activeOpacity={0.8}
           onPress={onFilterPress}
           style={[
@@ -93,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.white,
     height: 48,
-    borderRadius: BorderRadius.card,
+    borderRadius: 12,
     paddingHorizontal: Spacing.base,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -114,13 +119,13 @@ const styles = StyleSheet.create({
   filterButton: {
     width: 48,
     height: 48,
-    borderRadius: BorderRadius.card,
+    borderRadius: 12,
     backgroundColor: Colors.lightPeach,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: Spacing.md,
     borderWidth: 1,
-    borderColor: '#FFDDC4',
+    borderColor: Colors.border,
     ...Shadows.soft,
   },
   filterButtonActive: {

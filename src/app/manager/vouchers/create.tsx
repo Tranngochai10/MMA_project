@@ -1,9 +1,11 @@
+import { DateField } from '../../../components/common/DateField';
+import { BrandPresence } from '../../../components/brand/BrandPresence';
+import { RemoteImage } from '../../../components/common/RemoteImage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   ScrollView,
 } from 'react-native';
@@ -14,24 +16,13 @@ import { AppHeader } from '../../../components/common/AppHeader';
 import { FormInput } from '../../../components/common/FormInput';
 import { PrimaryButton } from '../../../components/common/PrimaryButton';
 import { SecondaryButton } from '../../../components/common/SecondaryButton';
-import { CATEGORIES } from '../../../constants/categories';
+import { categoryName } from '../../../services/apiMappers';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../../../constants/theme';
 import { useApp } from '../../../context/AppContext';
 import { VoucherCategory, VoucherStatus } from '../../../types';
 import { router } from 'expo-router';
 import { api } from '../../../services/api';
 import { CategoryDto } from '../../../services/apiTypes';
-
-const CATEGORY_SLUGS: Record<string, string> = {
-  'Food & Dining': 'food-dining',
-  'Coffee & Tea': 'coffee-tea',
-  Entertainment: 'entertainment',
-  'Travel & Hotel': 'travel-hotel',
-  'Tech & Gadgets': 'tech-gadgets',
-  'Beauty & Spa': 'beauty-spa',
-  Groceries: 'groceries',
-  Fitness: 'fitness',
-};
 
 export default function CreateVoucherScreen() {
   const { currentUser, brands, createVoucher, preferredVoucherBrandId, setPreferredVoucherBrandId } = useApp();
@@ -40,21 +31,18 @@ export default function CreateVoucherScreen() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<VoucherCategory>('Food & Dining');
+  const [category, setCategory] = useState<VoucherCategory>('All');
   const [apiCategories, setApiCategories] = useState<CategoryDto[]>([]);
-  const [originalValue, setOriginalValue] = useState('20.00');
-  const [sellingPrice, setSellingPrice] = useState('10.00');
-  const [discountValue, setDiscountValue] = useState('50');
-  const [totalQuantity, setTotalQuantity] = useState('100');
-  const [startDate, setStartDate] = useState('2026-10-22');
-  const [expirationDate, setExpirationDate] = useState('2026-12-31');
-  const [conditionsText, setConditionsText] = useState(
-    'Valid at all branches nationwide\nCannot be combined with other coupons\nPresent voucher barcode before billing'
-  );
-  const [coverImage, setCoverImage] = useState(
-    'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&auto=format&fit=crop&q=80'
-  );
+  const [originalValue, setOriginalValue] = useState('');
+  const [sellingPrice, setSellingPrice] = useState('');
+  const [discountValue, setDiscountValue] = useState('');
+  const [totalQuantity, setTotalQuantity] = useState('');
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [expirationDate, setExpirationDate] = useState(() => new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+  const [conditionsText, setConditionsText] = useState('');
+  const [coverImage, setCoverImage] = useState('');
 
+  const [coverAsset, setCoverAsset] = useState<ImagePicker.ImagePickerAsset>();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const submissionLock = useRef(false);
@@ -67,33 +55,19 @@ export default function CreateVoucherScreen() {
 
   const assignedBrand = brands.find((brand) => brand.id === selectedBrandId);
   const assignedBrandName = assignedBrand?.name || 'Chọn thương hiệu';
-  const categoryId = apiCategories.find((item) => item.slug === CATEGORY_SLUGS[category])?._id;
+  const categoryId = apiCategories.find((item) => categoryName(item.name) === category)?._id;
 
   const handlePickCover = async () => {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        // Toggle preset high-res Unsplash demo images
-        const presets = [
-          'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&auto=format&fit=crop&q=80',
-        ];
-        const next = presets[(presets.indexOf(coverImage) + 1) % presets.length];
-        setCoverImage(next);
-        return;
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) throw new Error('Image must be 5 MB or smaller.');
+        setCoverAsset(asset);
+        setCoverImage(asset.uri);
       }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets[0].uri) {
-        setCoverImage(result.assets[0].uri);
-      }
-    } catch {
-      // Fallback
+    } catch (error) {
+      setSubmitMessage(error instanceof Error ? error.message : 'Unable to select image.');
     }
   };
 
@@ -101,10 +75,10 @@ export default function CreateVoucherScreen() {
     const newErrors: Record<string, string> = {};
     if (!title.trim()) newErrors.title = 'Vui lòng nhập tiêu đề chiến dịch voucher';
     if (!description.trim()) newErrors.description = 'Vui lòng nhập mô tả chi tiết';
-    if (isNaN(Number(originalValue)) || Number(originalValue) <= 0) {
+    if (!Number.isSafeInteger(Number(originalValue)) || Number(originalValue) <= 0) {
       newErrors.originalValue = 'Vui lòng nhập giá gốc hợp lệ';
     }
-    if (isNaN(Number(sellingPrice)) || Number(sellingPrice) <= 0) {
+    if (!Number.isSafeInteger(Number(sellingPrice)) || Number(sellingPrice) <= 0) {
       newErrors.sellingPrice = 'Vui lòng nhập giá bán hợp lệ';
     }
     if (isNaN(Number(totalQuantity)) || Number(totalQuantity) <= 0) {
@@ -135,7 +109,9 @@ export default function CreateVoucherScreen() {
     try {
       submissionLock.current = true;
       setSubmitting(true);
-      await createVoucher({ brandId: selectedBrandId, categoryId, brandName: assignedBrandName, brandLogo: assignedBrand?.logo || '', title: title.trim(), description: description.trim(), category, discountType: 'PERCENTAGE', discountValue: Number(discountValue), discountDisplay: `GIẢM ${discountValue}%`, sellingPrice: Number(sellingPrice), originalValue: Number(originalValue), startDate, expirationDate, usageConditions: conditionsText.split('\n').map((line) => line.trim()).filter(Boolean), totalQuantity: Number(totalQuantity), coverImage, status: targetStatus });
+      const uploadedCover = coverAsset ? (await api.uploadImage(coverAsset)).url : coverImage;
+      if (coverAsset) { setCoverImage(uploadedCover); setCoverAsset(undefined); }
+      await createVoucher({ brandId: selectedBrandId, categoryId, brandName: assignedBrandName, brandLogo: assignedBrand?.logo || '', title: title.trim(), description: description.trim(), category, discountType: 'PERCENTAGE', discountValue: Number(discountValue), discountDisplay: `GIẢM ${discountValue}%`, sellingPrice: Number(sellingPrice), originalValue: Number(originalValue), startDate, expirationDate, usageConditions: conditionsText.split('\n').map((line) => line.trim()).filter(Boolean), totalQuantity: Number(totalQuantity), coverImage: uploadedCover, status: targetStatus });
       setSubmitSucceeded(true);
       setSubmitMessage(targetStatus === 'DRAFT' ? 'Đã lưu voucher dưới dạng bản nháp.' : 'Chiến dịch voucher đã được phát hành.');
     } catch (error) {
@@ -157,7 +133,7 @@ export default function CreateVoucherScreen() {
             onPress={handlePickCover}
             style={styles.coverWrapper}
           >
-            <Image source={{ uri: coverImage }} style={styles.coverPreview} />
+            <RemoteImage uri={coverImage} style={styles.coverPreview} />
             <View style={styles.coverOverlay}>
               <Ionicons name="camera" size={24} color={Colors.white} />
               <Text style={styles.coverOverlayText}>Thay Đổi Ảnh</Text>
@@ -170,9 +146,14 @@ export default function CreateVoucherScreen() {
           <Text style={styles.cardTitle}>Thương Hiệu Áp Dụng</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
             {brands.map((brand) => <TouchableOpacity key={brand.id} onPress={() => { setBrandChoice(brand.id); setPreferredVoucherBrandId(''); }} style={[styles.categoryChip, selectedBrandId === brand.id && styles.categoryChipActive]}><Text style={[styles.categoryChipText, selectedBrandId === brand.id && styles.categoryChipTextActive]}>{brand.name}</Text></TouchableOpacity>)}
-            <TouchableOpacity onPress={() => router.push('/(manager)/brands/create')} style={[styles.categoryChip, styles.newBrandChip]}><Text style={styles.newBrandText}>＋ Tạo thương hiệu</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/manager/brands/create')} style={[styles.categoryChip, styles.newBrandChip]}><Text style={styles.newBrandText}>＋ Tạo thương hiệu</Text></TouchableOpacity>
           </ScrollView>
         </View>
+
+        {assignedBrand && <View style={{ marginHorizontal: Spacing.base }}>
+          <BrandPresence compact name={assignedBrand.name} salesChannel={assignedBrand.salesChannel} websiteUrl={assignedBrand.websiteUrl} />
+          <TouchableOpacity onPress={() => router.push(`/manager/brands/${assignedBrand.id}/edit`)} style={{ paddingVertical: 14 }}><Text style={{ color: Colors.primaryCoral }}>Cấu hình hình thức cửa hàng của brand</Text></TouchableOpacity>
+        </View>}
 
         {/* General Details */}
         <View style={styles.card}>
@@ -180,7 +161,7 @@ export default function CreateVoucherScreen() {
 
           <FormInput
             label="Tiêu Đề Voucher *"
-            placeholder="Ví dụ: Voucher Đồ Uống & Bánh $25"
+            placeholder="Nhập tên voucher"
             value={title}
             onChangeText={(txt: string) => {
               setTitle(txt);
@@ -211,7 +192,7 @@ export default function CreateVoucherScreen() {
               contentContainerStyle={styles.categoryScroll}
               style={{ flexGrow: 0 }}
             >
-              {CATEGORIES.filter((c) => c.id !== 'All').map((cat) => (
+              {apiCategories.map(item => ({ id: categoryName(item.name), label: item.name })).map((cat) => (
                 <TouchableOpacity
                   key={cat.id}
                   activeOpacity={0.7}
@@ -242,8 +223,8 @@ export default function CreateVoucherScreen() {
           <View style={styles.rowTwo}>
             <View style={styles.flexOne}>
               <FormInput
-                label="Giá Gốc ($) *"
-                placeholder="25.00"
+                label="Giá gốc (VND) *"
+                placeholder="Nhập số tiền VND"
                 value={originalValue}
                 onChangeText={setOriginalValue}
                 keyboardType="numeric"
@@ -252,8 +233,8 @@ export default function CreateVoucherScreen() {
             </View>
             <View style={[styles.flexOne, { marginLeft: Spacing.sm }]}>
               <FormInput
-                label="Giá Bán Ưu Đãi ($) *"
-                placeholder="10.00"
+                label="Giá bán ưu đãi (VND) *"
+                placeholder="Nhập số tiền VND"
                 value={sellingPrice}
                 onChangeText={setSellingPrice}
                 keyboardType="numeric"
@@ -265,7 +246,7 @@ export default function CreateVoucherScreen() {
           <View style={styles.rowTwo}>
             <View style={styles.flexOne}>
               <FormInput
-                label="Mức Giảm (% hoặc $)"
+                label="Mức giảm (%)"
                 placeholder="50"
                 value={discountValue}
                 onChangeText={setDiscountValue}
@@ -291,7 +272,7 @@ export default function CreateVoucherScreen() {
 
           <View style={styles.rowTwo}>
             <View style={styles.flexOne}>
-              <FormInput
+              <DateField
                 label="Ngày Bắt Đầu"
                 placeholder="YYYY-MM-DD"
                 value={startDate}
@@ -299,7 +280,7 @@ export default function CreateVoucherScreen() {
               />
             </View>
             <View style={[styles.flexOne, { marginLeft: Spacing.sm }]}>
-              <FormInput
+              <DateField
                 label="Ngày Hết Hạn *"
                 placeholder="YYYY-MM-DD"
                 value={expirationDate}
@@ -371,7 +352,7 @@ const styles = StyleSheet.create({
   },
   coverPreview: {
     width: '100%',
-    height: '100%',
+    height: 172,
     resizeMode: 'cover',
   },
   coverOverlay: {
@@ -393,17 +374,19 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.card,
-    padding: Spacing.base,
+    borderRadius: 14,
+    padding: 20,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: Spacing.base,
+    marginBottom: 20,
     ...Shadows.card,
   },
   cardTitle: {
     ...Typography.h4,
     color: Colors.primaryText,
-    marginBottom: Spacing.md,
+    marginBottom: 20,
+    fontSize: 18,
+    fontWeight: '600',
   },
   assignedBrandRow: {
     flexDirection: 'row',
@@ -462,9 +445,12 @@ const styles = StyleSheet.create({
   newBrandText: { ...Typography.caption, fontWeight: '700', color: Colors.primaryCoral },
   rowTwo: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 0,
   },
   flexOne: {
     flex: 1,
+    minWidth: 130,
   },
   actionsContainer: {
     marginTop: Spacing.sm,

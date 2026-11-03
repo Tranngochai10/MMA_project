@@ -100,7 +100,8 @@ const styles = StyleSheet.create({
     color: Colors.secondaryText,
     textAlign: 'center',
     marginBottom: Spacing.base,
-    lineHeight: 22,
+    lineHeight: 24,
+    fontSize: 15,
   },
   subContainer: {
     backgroundColor: Colors.warmCream,
